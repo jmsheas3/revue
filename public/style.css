@@ -1,0 +1,452 @@
+/* Each color is light-dark(light, dark). color-scheme picks the side: the OS setting by default,
+   or the theme forced by data-theme on <html> (set by applyTheme in index.html). */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(#ffffff, #0d1117); --bg2: light-dark(#f6f8fa, #161b22); --bg3: light-dark(#eaeef2, #21262d);
+  --fg: light-dark(#1f2328, #e6edf3); --muted: light-dark(#656d76, #8d96a0); --border: light-dark(#d0d7de, #30363d);
+  --accent: light-dark(#0969da, #4493f8); --sel: light-dark(#ddf4ff, #1f2d3d);
+  --add-bg: light-dark(#e6ffec, rgba(46,160,67,.12)); --add-num: light-dark(#ccffd8, rgba(63,185,80,.3)); --add-mark: light-dark(#a6ecb4, rgba(46,160,67,.4));
+  --del-bg: light-dark(#ffebe9, rgba(248,81,73,.12)); --del-num: light-dark(#ffd7d5, rgba(248,81,73,.3)); --del-mark: light-dark(#ffcecb, rgba(248,81,73,.4));
+  --wrap-num: light-dark(#eaeef2, rgba(110,118,129,.15)); --add-num-wrap: light-dark(#b4f1c3, rgba(63,185,80,.18)); --del-num-wrap: light-dark(#ffc6c2, rgba(248,81,73,.18));
+  --hunk-bg: var(--bg2); --target: light-dark(rgba(9,105,218,.13), rgba(68,147,248,.2)); --note: light-dark(#bf8700, #d29922);
+  --note-bg: light-dark(#fff8c5, rgba(210,153,34,.12)); --note-rule: light-dark(#eac54f, rgba(210,153,34,.4));
+  --fg2: light-dark(#424a53, #c9d1d9); --note-fg: light-dark(#7d4e00, #d29922);
+  --st-M: light-dark(#9a6700, #d29922); --st-A: light-dark(#1a7f37, #3fb950); --st-D: light-dark(#cf222e, #f85149); --st-R: light-dark(#8250df, #a371f7);
+  --checker: light-dark(#eaeef2, #21262d); /* the dark squares behind a transparent image */
+  --on-accent: light-dark(#ffffff, #0d1117); --shadow: light-dark(rgba(0,0,0,.2), rgba(1,4,9,.6)); --scrim: light-dark(rgba(0,0,0,.3), rgba(1,4,9,.6));
+  --mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+  /* sizes the code tables are built on; app.js reads them once (cssPx) where it needs them as numbers */
+  --line-h: 18px; /* one line of code (12px text) */
+  --num-w: 52px;  /* a line-number column */
+  --sign-w: 16px; /* the +/- column */
+  --bar-h: 44px;  /* the top bar in narrow windows */
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 13px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; display: flex; flex-direction: column; }
+button, select, input { font: inherit; color: inherit; }
+.muted { color: var(--muted); }
+[hidden] { display: none !important; }
+
+/* global bar: where you are (repo, branch, mode) and the server's state */
+#top { display: flex; align-items: stretch; gap: 16px; height: 40px; flex: none; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--bg2); }
+#top > * { align-self: center; }
+#top .spacer { flex: 1; }
+#top select, #filter, #toolbar select { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
+/* Long repo and branch names shrink with an ellipsis (the picker and the base select first, they are the widest)
+   before anything is pushed out of the bar; each keeps a minimum width so it never collapses onto its neighbors.
+   .repo and #branch-controls keep their default min-width (auto, their content's minimum), so the bar shrinks the
+   other items before it squeezes them below the minimums inside them and they spill into the next control. */
+#repo-name { font-size: 13px; min-width: 3em; max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.repo { display: flex; align-items: center; gap: 8px; }
+/* the branch picker: a native select laid invisibly over a button-like face, so it keeps the native keyboard and menu.
+   A grid whose one column can shrink to nothing: its minimum is then its own min-width, not the face's unwrapped text. */
+.picker { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; min-width: 7rem; max-width: 340px; }
+.picker-face { display: flex; align-items: center; gap: 6px; min-width: 0; width: 100%; overflow: hidden; padding: 2px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; white-space: nowrap; }
+/* min-width: the face is filled after /api/info, and a short name then fits without moving the mode tabs */
+.picker-face b { flex: 0 1 auto; min-width: 6ch; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.picker-face #branch-note { font-size: 12px; overflow: hidden; text-overflow: ellipsis; flex: 0 3 auto; min-width: 0; }
+.picker-face .caret { flex: none; margin-left: auto; font-size: 10px; color: var(--muted); }
+#modes, #status, #keys, #theme { flex: none; }
+#branch-controls label { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+/* the closed select shows as much of the base as fits; the open list shows the full names. The percentage width makes
+   its minimum its min-width (a select's own minimum is its longest option), and it fills what the label has left. */
+#base-select { width: 100%; min-width: 6rem; max-width: 12rem; flex: 0 1 auto; text-overflow: ellipsis; }
+#branch-controls .short { display: none; }
+#top .picker select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.picker:hover .picker-face { background: var(--bg3); }
+.picker:focus-within .picker-face { outline: 2px solid var(--accent); outline-offset: -1px; }
+/* mode tabs: full height, underlined when active */
+#modes { display: flex; align-self: stretch; gap: 4px; }
+#modes button { display: flex; align-items: center; gap: 6px; padding: 0 10px; background: none; border: 0; color: var(--fg2); cursor: pointer; }
+#modes button:hover { color: var(--fg); }
+#modes button.on { font-weight: 600; color: var(--fg); box-shadow: inset 0 -2px var(--accent); }
+#modes .key { font: 400 11px var(--mono); color: var(--muted); }
+#mode-select, #drawer-btn, #more { display: none; }
+/* segmented settings: a raised "on" option on a sunken track; filled accent is for focus and the selected row */
+.seg { display: inline-flex; gap: 2px; padding: 2px; background: var(--bg3); border-radius: 7px; font-size: 12px; }
+.seg button { background: none; border: 0; padding: 1px 10px; border-radius: 5px; color: var(--fg2); cursor: pointer; }
+.seg button:hover { color: var(--fg); }
+.seg button.on { background: var(--bg); color: var(--fg); font-weight: 600; box-shadow: 0 0 0 1px var(--border); }
+.seg button:disabled, .seg button[aria-disabled="true"] { opacity: .5; cursor: default; }
+.icon-btn { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+.icon-btn:hover, .icon-btn[aria-expanded="true"] { background: var(--bg3); }
+#checkout { background: var(--bg); border: 1px solid var(--accent); color: var(--accent); border-radius: 6px; padding: 2px 10px; cursor: pointer; white-space: nowrap; }
+#checkout:hover { background: var(--accent); color: var(--on-accent); }
+#checkout:disabled { opacity: .5; cursor: default; }
+/* live status: a dot and a label, in a hover target that opens the status card */
+.live { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 0; border-radius: 6px; background: none; color: var(--fg2); font-size: 12px; cursor: help; }
+.live::before { content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.live.on::before { background: var(--st-A); }
+.live:hover, .live[aria-expanded="true"] { background: var(--bg3); }
+/* the stale badge keeps its width (flex: none): long names shrink instead, and below 1150 px it says only "Restart" */
+#stale { flex: none; color: var(--st-D); border: 1px solid currentColor; border-radius: 6px; padding: 1px 8px; font-size: 12px; cursor: help; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#stale .short { display: none; }
+
+#body { flex: 1; display: flex; min-height: 0; }
+#side { width: 320px; min-width: 180px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--bg2); }
+#resizer { width: 4px; cursor: col-resize; margin-left: -2px; margin-right: -2px; z-index: 1; }
+#resizer:hover, #resizer.drag { background: var(--accent); }
+#main-col { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#main { flex: 1; overflow: auto; min-width: 0; padding-bottom: 20px; }
+#main:focus { outline: none; } /* focusable (tabindex -1) only so focus lands here when the drawer closes */
+/* view toolbar: what the main pane shows, and the settings for it */
+#toolbar { display: flex; align-items: center; gap: 14px; height: 38px; flex: none; padding: 0 16px; border-bottom: 1px solid var(--border); font-size: 12px; white-space: nowrap; }
+#toolbar .spacer { flex: 1; }
+#view-label { color: var(--muted); overflow: hidden; text-overflow: ellipsis; min-width: 8ch; }
+#view-label .file { font-family: var(--mono); }
+#toolbar .divider { width: 1px; height: 18px; background: var(--border); }
+#notes-bar[hidden] + .divider { display: none; } /* it separates the notes from the diff settings */
+/* the diff settings, in the toolbar and in narrow windows' ⋯ menu, show only where a text diff is drawn (renderToolbar) */
+#toolbar.no-diff .diff-only, body:has(#toolbar.no-diff) #more-menu .diff-only { display: none; }
+#context-ctl { color: var(--muted); display: flex; align-items: center; gap: 6px; }
+#toolbar select { color: var(--fg); }
+#notes-bar { display: flex; align-items: center; gap: 4px; }
+/* the notes give way before the view label at the narrowest toolbar widths */
+#notes-bar { min-width: 0; }
+#notes-other { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#notes-bar button { background: none; border: 0; padding: 2px 4px; border-radius: 4px; cursor: pointer; }
+#notes-bar button:hover { background: var(--bg3); }
+#notes-next { color: var(--note-fg); font-weight: 600; }
+#notes-next .more { color: var(--muted); font-weight: 400; margin-left: 4px; }
+#notes-other, #notes-menu-btn { color: var(--muted); }
+#notes-more { position: relative; }
+
+.pane-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; }
+.pane-head.sub { padding-top: 0; }
+#filter { width: 100%; }
+.pane-title { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+#commits-pane { display: flex; flex-direction: column; flex: none; height: 40%; min-height: 0; }
+#commits { list-style: none; margin: 0; padding: 0; overflow: auto; flex: 1; }
+#commits li { display: flex; flex-direction: column; gap: 1px; padding: 5px 10px 5px 7px; cursor: pointer; border-left: 3px solid transparent; }
+#commits li:hover { background: var(--bg3); }
+#commits li.sel { background: var(--sel); border-left-color: var(--accent); }
+#commits li.sel .subj { font-weight: 600; }
+#commits .line1 { display: flex; align-items: center; gap: 6px; min-width: 0; }
+#commits .merge { flex: none; width: 11px; color: var(--st-R); font-size: 11px; }
+#commits .subj { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#commits .meta { display: flex; gap: 6px; padding-left: 17px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+#commits .meta code { font-family: var(--mono); }
+#commits .meta .author { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#commits .meta .age { margin-left: auto; flex: none; }
+.refs { flex: none; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; padding: 0 5px; border-radius: 4px; background: var(--bg3); color: var(--fg2); }
+.refs-more { flex: none; font-size: 11px; color: var(--muted); }
+#commits li.more { text-align: center; color: var(--accent); }
+/* the row divider between the commit list and the file tree */
+#pane-split { flex: none; height: 9px; cursor: row-resize; display: grid; place-items: center; border-block: 1px solid var(--border); background: var(--bg2); touch-action: none; }
+#pane-split::before { content: ''; width: 28px; height: 3px; border-radius: 2px; background: var(--border); }
+#pane-split:hover::before, #pane-split.drag::before { background: var(--accent); }
+#pane-split:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+#tree-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+#tree { flex: 1; overflow: auto; padding-bottom: 20px; user-select: none; }
+
+.node { display: flex; align-items: center; gap: 4px; padding: 1px 8px 1px 0; cursor: pointer; white-space: nowrap; }
+.node:hover { background: var(--bg3); }
+.node.sel { background: var(--sel); }
+.node .twisty { width: 14px; text-align: center; color: var(--muted); font-size: 10px; flex: none; }
+.node .name { overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.node.dim .name { color: var(--muted); }
+.node.st-D .name { text-decoration: line-through; color: var(--muted); }
+.badge { font: 11px var(--mono); font-weight: 600; width: 14px; text-align: center; flex: none; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--st-M); flex: none; margin-right: 4px; }
+.count { font-size: 11px; color: var(--muted); flex: none; }
+.node .count .a, .node .count .d { color: inherit; }
+.note-count { flex: none; font: 600 10px/16px system-ui, -apple-system, 'Segoe UI', sans-serif; padding: 0 5px; border-radius: 8px; color: var(--note-fg); background: var(--note-bg); }
+/* the status color is on the letter only, so a branch full of additions doesn't turn the whole tree green */
+.st-M .badge { color: var(--st-M); }
+.st-A .badge, .st-\? .badge { color: var(--st-A); }
+.st-D .badge { color: var(--st-D); }
+.st-R .badge, .st-C .badge, .st-T .badge { color: var(--st-R); }
+
+/* main area */
+.file-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 6px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+.file-head .path { font: 13px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; cursor: pointer; }
+.file-head .path .dir, .file-head .path .old { color: var(--muted); }
+.file-head .path .base { font-weight: 600; }
+.file-head .letter { font: 600 11px var(--mono); flex: none; }
+.file-head .stat { flex: none; font-size: 12px; }
+.file-head .seg { flex: none; }
+.back-btn { flex: none; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; background: none; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+.back-btn:hover { background: var(--bg3); }
+.stat .a { color: var(--st-A); } .stat .d { color: var(--st-D); }
+.letter.st-M { color: var(--st-M); } .letter.st-A, .letter.st-\? { color: var(--st-A); } .letter.st-D { color: var(--st-D); } .letter.st-R, .letter.st-C, .letter.st-T { color: var(--st-R); }
+.overview-head { display: flex; flex-direction: column; gap: 3px; padding: 14px 16px 12px; border-bottom: 1px solid var(--border); }
+.overview-head h2 { margin: 0; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.overview-head .meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--muted); }
+.overview-head .meta code { font-family: var(--mono); }
+.overview-head .link { background: none; border: 0; padding: 0; font: 12px var(--mono); color: var(--accent); cursor: pointer; }
+.overview-head .link:hover { text-decoration: underline; }
+.commit-body { margin: 6px 0 0; font-size: 13px; color: var(--fg2); white-space: pre-wrap; overflow-wrap: anywhere; max-width: 900px; }
+.commit-body.clamp { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.commit-body.clamp.more { cursor: pointer; }
+/* overview: no cards; each file starts at its sticky header. Offscreen sections are skipped in layout and paint,
+   holding their estimated height (--est, from sectionHeight in app.js) until they have been shown once; "auto" then
+   keeps their real height */
+.section { content-visibility: auto; contain-intrinsic-size: auto var(--est, 300px); }
+.section.closed { contain-intrinsic-size: auto 34px; }
+.section .file-head { border-top: 1px solid var(--border); }
+.overview-head + .section .file-head { border-top: 0; }
+.section .collapse { background: none; border: 0; cursor: pointer; color: var(--muted); padding: 0; width: 14px; flex: none; }
+.section.closed .diff-body { display: none; }
+.placeholder { padding: 16px; color: var(--muted); }
+/* Images (imageView): each under its caption, scaled down to fit and never up (its width and height attributes keep
+   its place while it loads), over a checkerboard that shows where it is transparent. A binary change shows Before and
+   After side by side where both fit, else one above the other. */
+.image-diff { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px 24px; align-items: start; padding: 12px 16px; }
+.file-body > figure.image { padding: 12px 16px; }
+figure.image { margin: 0; min-width: 0; }
+figure.image figcaption { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+/* content-box: its border goes around the size its width attribute gives it, rather than into it */
+figure.image img { display: block; box-sizing: content-box; max-width: calc(100% - 2px); height: auto; border: 1px solid var(--border);
+  background: repeating-conic-gradient(var(--checker) 0 25%, transparent 0 50%) 0 0 / 16px 16px; }
+figure.image .placeholder { padding: 0; }
+/* a diff still loading: its likely height, with a few bars in place of the code */
+.skeleton { display: flex; flex-direction: column; gap: 9px; padding: 12px 16px 12px calc(var(--num-w) + var(--sign-w) + 8px); overflow: hidden; }
+.skeleton span { height: 8px; border-radius: 4px; background: var(--bg3); }
+.skeleton span:nth-child(1) { width: 62%; } .skeleton span:nth-child(2) { width: 48%; } .skeleton span:nth-child(3) { width: 70%; }
+/* Changes mode with a clean tree */
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 56px 16px; text-align: center; }
+.empty-state h2 { margin: 0; font-size: 16px; font-weight: 600; }
+/* the dot is inline, so it stays at the start of the first line when the centered text wraps */
+.empty-state .watching { color: var(--muted); }
+.empty-state .watching::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 6px; vertical-align: 1px; border-radius: 50%; background: var(--muted); }
+.empty-state .watching.on::before { background: var(--st-A); }
+/* the button wraps below the commit when the box is too narrow for both */
+.latest { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; width: min(560px, 100%); margin-top: 16px; padding: 10px 14px; text-align: left;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; }
+.latest .what { flex: 1 1 16rem; min-width: 0; }
+.latest .when { font-size: 11px; color: var(--muted); }
+.latest .subj { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.latest code { font-family: var(--mono); color: var(--muted); margin-right: 6px; }
+.latest button { flex: none; display: flex; align-items: center; gap: 6px; padding: 3px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+.latest button:hover { background: var(--bg3); }
+kbd { font: 11px var(--mono); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: var(--bg2); }
+
+/* Every row is var(--line-h) tall, blank lines and the 11px line numbers included (a fixed line height, not 1.5). */
+table.code { width: 100%; border-collapse: collapse; font: 12px/var(--line-h) var(--mono); table-layout: fixed; }
+table.code col.num { width: var(--num-w); }
+table.code col.sign { width: var(--sign-w); }
+table.code td { padding: 0 8px; vertical-align: top; }
+table.code td.num { text-align: right; color: var(--muted); user-select: none; padding: 0 8px 0 4px; font-size: 11px; }
+table.code td.sign { padding: 0 0 0 4px; user-select: none; color: var(--muted); }
+/* Long lines wrap at word boundaries with a hanging indent, and the gutter beside the continuation lines is shaded
+   so a wrapped row reads as one line. w turns wrapping off (#main.nowrap), and diffs are then unified (diffLayout). */
+table.code td.src { white-space: pre-wrap; overflow-wrap: break-word; padding-left: calc(8px + 3ch); text-indent: -3ch; }
+table.code td.num { background-image: linear-gradient(transparent var(--line-h), var(--wrap-num) var(--line-h)); }
+/* a size container, so notes and hunk headers can stay within its visible width (100cqw) while the code scrolls */
+#main.nowrap .diff-body, #main.nowrap .file-body { overflow-x: auto; container-type: inline-size; }
+#main.nowrap table.code { width: max-content; min-width: 100%; table-layout: auto; }
+#main.nowrap table.code td.src { white-space: pre; }
+/* the gutter stays put while the code scrolls; opaque, so code doesn't show through the translucent dark colors */
+#main.nowrap table.unified td.num, #main.nowrap table.unified td.sign, #main.nowrap table.fileview td.num { position: sticky; left: 0; z-index: 1; background-color: var(--bg); }
+#main.nowrap table.unified td.num + td.num { left: var(--num-w); }
+#main.nowrap table.unified td.sign { left: calc(2 * var(--num-w)); }
+#main.nowrap table.unified tr.add td.sign { background-image: linear-gradient(var(--add-bg), var(--add-bg)); }
+#main.nowrap table.unified tr.del td.sign { background-image: linear-gradient(var(--del-bg), var(--del-bg)); }
+/* notes and hunk headers keep to the visible width and stay at its left edge */
+#main.nowrap tr.note .note-box { position: sticky; left: 0; max-width: 100cqw; }
+#main.nowrap tr.hunk .hunk-line { position: sticky; left: 8px; max-width: calc(100cqw - 16px); }
+.ch-probe { position: absolute; visibility: hidden; font: 12px var(--mono); white-space: pre; }
+table.code.split td.src { border-right: 1px solid var(--border); }
+table.code.split td.src:last-child { border-right: 0; }
+tr.add td.src, tr.add td.sign, td.add { background-color: var(--add-bg); }
+tr.del td.src, tr.del td.sign, td.del { background-color: var(--del-bg); }
+/* table.code: these must outrank the wrap shading above (split diffs mark the cell, unified the row) */
+table.code tr.add td.num, table.code td.num.add, table.fileview tr.changed td.num { background-image: linear-gradient(var(--add-num) var(--line-h), var(--add-num-wrap) var(--line-h)); }
+table.code tr.del td.num, table.code td.num.del { background-image: linear-gradient(var(--del-num) var(--line-h), var(--del-num-wrap) var(--line-h)); }
+table.code td.empty { background: var(--bg2); }
+td.add mark, tr.add mark { background: var(--add-mark); color: inherit; border-radius: 2px; }
+td.del mark, tr.del mark { background: var(--del-mark); color: inherit; border-radius: 2px; }
+/* hunk header: how many lines it skips, where it starts, then git's function context */
+tr.hunk td { background: var(--hunk-bg); color: var(--fg); padding: 2px 8px; border-block: 1px solid var(--bg3); }
+.hunk-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hunk-gap, .hunk-range { color: var(--muted); font-size: 11px; margin-right: 10px; }
+tr.gap td { height: 4px; }
+tr.noeol td { color: var(--muted); font-style: italic; }
+/* file view: changed-line markers in the gutter */
+table.fileview tr.changed td.num { box-shadow: inset -3px 0 var(--st-A); }
+table.fileview tr.changed td.src { background-color: var(--add-bg); }
+table.fileview tr.delafter td.num { box-shadow: inset 0 -2px var(--st-D); }
+table.fileview tr.delbefore td.num { box-shadow: inset 0 2px var(--st-D); }
+/* big file views: one table per chunk of lines, skipped while offscreen ("auto" keeps the real size once shown) */
+table.fileview.chunk { content-visibility: auto; }
+/* target lines (go to definition, agents): a tint over the add/del colors, and an accent bar */
+table.code tr.target td.src, table.code tr.target td.sign { background-image: linear-gradient(var(--target), var(--target)); }
+/* the sticky sign cell of a no-wrap unified diff paints its tint as an image (above): the target goes on top of it */
+#main.nowrap table.unified tr.target td.sign { background-image: linear-gradient(var(--target), var(--target)); }
+#main.nowrap table.unified tr.target.add td.sign { background-image: linear-gradient(var(--target), var(--target)), linear-gradient(var(--add-bg), var(--add-bg)); }
+#main.nowrap table.unified tr.target.del td.sign { background-image: linear-gradient(var(--target), var(--target)), linear-gradient(var(--del-bg), var(--del-bg)); }
+table.code tr.target td.num { box-shadow: inset 3px 0 var(--accent); color: var(--fg); }
+/* agent notes */
+table.code td.num.noted { color: var(--note); font-weight: 600; }
+/* a note is a full-width band under its last line (in a split diff, under its side's half), its text lined up with
+   the code: after the number columns and the sign, plus the code cell's 8px padding */
+tr.note td { padding: 0; }
+.note-box { padding: 8px 12px 10px calc(var(--num-w) + 8px); background: var(--note-bg); border-block: 1px solid var(--note-rule); font: 13px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+table.unified .note-box { padding-left: calc(2 * var(--num-w) + var(--sign-w) + 8px); }
+table.split .note-box { padding-left: calc(var(--num-w) + var(--sign-w) + 8px); }
+.note-box + .note-box { border-top: 0; }
+.note-box.stale { background: var(--bg2); border-color: var(--border); }
+.note-box.stale .note-head { color: var(--muted); }
+/* split diffs: each half holds the notes about its own side; an empty half stays blank */
+tr.split-note td.note-half { vertical-align: top; }
+tr.split-note td.note-half + td.note-half { border-left: 1px solid var(--border); }
+.note-side { font-size: 11px; color: var(--muted); border: 1px solid var(--border); border-radius: 8px; padding: 0 6px; }
+.notes-missing { border-bottom: 1px solid var(--border); }
+.notes-missing .note-box { padding-left: 16px; }
+.note-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; font-size: 12px; color: var(--note-fg); }
+.note-head .end { margin-left: auto; display: flex; gap: 10px; align-items: baseline; }
+.note-text { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 2px; }
+.note-stale { font-size: 11px; color: var(--muted); }
+.note-link { background: none; border: 0; padding: 0; color: inherit; cursor: pointer; font-size: 12px; }
+.note-link:hover { text-decoration: underline; }
+
+/* The markdown preview's frame (mdFrame in app.js). Its shadow root takes its styles from markdown.css. Containment
+   makes the frame the containing block of anything positioned inside it, fixed included, and clips that to the frame. */
+.md-frame { contain: layout paint style; overflow: clip; }
+
+/* go to definition */
+#main.def-hover td.src { cursor: pointer; }
+::highlight(def-link) { color: var(--accent); text-decoration: underline; }
+.def-picker { position: fixed; z-index: 10; min-width: 280px; max-width: min(720px, calc(100vw - 16px)); max-height: 50vh; overflow: auto; padding: 4px 0;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 8px 24px var(--shadow); }
+.def-title { padding: 2px 10px 4px; font-size: 11px; }
+.def-item { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; width: 100%; text-align: left; background: none; border: 0; padding: 4px 10px; cursor: pointer; }
+.def-item:hover, .def-item:focus { background: var(--sel); outline: none; }
+.def-loc { font: 12px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.def-kind { font-size: 11px; color: var(--muted); }
+.def-item code { grid-column: 1 / -1; font: 11px var(--mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* theme menu */
+/* menus: the theme menu, the overflow menu (narrow windows) and the notes menu */
+#theme, #more { position: relative; }
+#theme svg { display: block; }
+.menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; min-width: 150px; padding: 4px 0; font-size: 13px; font-weight: 400;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 8px 24px var(--shadow); }
+.menu button { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; background: none; border: 0; border-radius: 0; padding: 4px 10px; color: var(--fg); cursor: pointer; white-space: nowrap; }
+.menu button:hover, .menu button:focus { background: var(--sel); outline: none; }
+.menu button[aria-disabled="true"] { color: var(--muted); cursor: default; }
+.menu .check { width: 1em; visibility: hidden; }
+.menu .ico { display: flex; margin-right: 2px; }
+.menu [aria-checked="true"] .check { visibility: visible; }
+.menu kbd { margin-left: auto; }
+.menu hr { margin: 4px 0; border: 0; border-top: 1px solid var(--border); }
+.menu-title { padding: 4px 10px 2px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.menu-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 10px; }
+/* header popovers: the shortcut list and the server status card */
+.popover { position: absolute; right: 0; top: calc(100% + 4px); z-index: 10; width: max-content; max-width: min(420px, calc(100vw - 24px));
+  padding: 8px 12px 10px; font-size: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 8px 24px var(--shadow); }
+.popover:focus { outline: none; }
+.popover h3 { margin: 6px 0 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.popover h3:first-child { margin-top: 0; }
+.popover dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
+.popover dt { white-space: nowrap; }
+.popover dd { margin: 0; }
+#keys, #status { position: relative; }
+#keys-btn { font-weight: 600; }
+#status-card dt { color: var(--muted); }
+#status-card .warn { color: var(--st-D); }
+#toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 10; padding: 6px 12px; border-radius: 6px;
+  background: var(--fg); color: var(--bg); opacity: 0; pointer-events: none; transition: opacity .2s; }
+#toast.on { opacity: 1; }
+.more-files { display: block; margin: 12px auto; padding: 4px 14px; cursor: pointer; }
+.node:focus-visible, #commits li:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ---------------------------------------------------------------- medium windows
+   The full bar is tight here, Branch mode's base select above all: tighter gaps, no key hints on the tabs, "vs" for
+   "compared with", and no "(narrow)" on the toolbar's Unified button, so the view label keeps its room. */
+@media (min-width: 761px) and (max-width: 1150px) {
+  #top { gap: 10px; }
+  #modes .key { display: none; }
+  #branch-controls .long { display: none; }
+  #branch-controls .short { display: inline; }
+  /* room at 761 px for a long branch that is only viewed (the Check out button) next to a long base */
+  #base-select { min-width: 4.5rem; }
+}
+@media (min-width: 761px) and (max-width: 1000px) {
+  #layout-seg .why { display: none; }
+  /* Room for the stale badge where the long names may already be at their minimum widths (a viewed branch's Check
+     out button too): tighter gaps and mode tabs, and the live status is its dot alone (the status card still says what
+     it is). The tabs' padding is what a wide system font (DejaVu Sans) needs on top of the rest. */
+  #top:has(> #stale:not([hidden])) { gap: 6px; }
+  #top:has(> #stale:not([hidden])) #modes button { padding: 0 6px; }
+  #top:has(> #stale:not([hidden])) #live-label { display: none; }
+}
+/* a plain folder (body.plain-folder, set from /api/info's `git: false`): no modes, branches, commits or diffs, and a
+   "folder" tag where the branch picker is. !important beats the narrow-window rules that show the mode select. */
+.plain-folder :is(#modes, #mode-select, #branch-pick, #checkout, #branch-controls, #commits-pane, #pane-split,
+  #changed-only-ctl, #more-context-row, #context-ctl, #layout-seg, #toolbar .divider) { display: none !important; }
+.folder-tag { flex: none; font-size: 11px; padding: 0 7px; border: 1px solid var(--border); border-radius: 9px; color: var(--muted); cursor: help; }
+body:not(.plain-folder) .folder-only, .plain-folder .repo-only { display: none; }
+/* Narrower than 1150 px (the narrow windows' bar too), the stale badge says only "Restart": the whole message stays in
+   its name and its title. At 1150 px the bar has room for the whole message. */
+@media (width < 1150px) {
+  #stale .long { display: none; }
+  #stale .short { display: inline; }
+}
+
+/* ---------------------------------------------------------------- narrow windows
+   One 44px bar (files drawer, mode, live status, overflow menu); the sidebar slides in over the content. */
+@media (max-width: 760px) {
+  #top { height: 44px; gap: 0; padding: 0; }
+  #top > #repo-name, #top > .repo, #top > #modes, #top > #branch-controls, #keys-btn, #theme { display: none; }
+  #drawer-btn, #more-btn { display: grid; width: 44px; height: 44px; border: 0; border-radius: 0; background: none; font-size: 18px; }
+  #more { display: block; }
+  /* drawn by hand, caret included, so no engine's native select shifts it in the bar */
+  #top #mode-select { display: block; flex: none; align-self: center; box-sizing: border-box; height: 32px; margin: 0 0 0 4px; padding: 0 24px 0 8px;
+    line-height: 30px; font-weight: 600; border: 1px solid transparent; border-radius: 6px; cursor: pointer; appearance: none; -webkit-appearance: none;
+    background: linear-gradient(45deg, transparent 50%, var(--muted) 50%) calc(100% - 13px) 50% / 5px 5px no-repeat,
+      linear-gradient(135deg, var(--muted) 50%, transparent 50%) calc(100% - 8px) 50% / 5px 5px no-repeat; }
+  #top #mode-select:hover { border-color: var(--border); }
+  #top #mode-select:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .live { width: 44px; height: 44px; justify-content: center; padding: 0; border-radius: 0; }
+  #live-label { display: none; }
+  #stale { max-width: 30vw; }
+  /* the popovers and the ⋯ menu hang from the window's edge, not from their buttons, so they stay on screen */
+  #keys-panel, #status-card { position: fixed; top: 48px; right: 8px; max-width: calc(100vw - 16px); }
+  #more-menu { right: 8px; max-width: calc(100vw - 16px); }
+  #side { position: fixed; inset: 44px auto 0 0; z-index: 20; width: min(320px, 85vw) !important; transform: translateX(-100%); transition: transform .2s ease;
+    visibility: hidden; }
+  body.drawer-open #side { transform: translateX(0); visibility: visible; }
+  body:not(.drawer-open) #side { transition: transform .2s ease, visibility 0s .2s; }
+  #scrim { position: fixed; inset: var(--bar-h) 0 0 0; z-index: 19; background: var(--scrim); }
+  body:not(.drawer-open) #scrim { display: none; }
+  #resizer { display: none; }
+  #drawer-head { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-bottom: 1px solid var(--border); }
+  #drawer-head .repo, #drawer-head .picker { max-width: none; width: 100%; }
+  #drawer-head .picker-face { flex: 1; padding: 6px 8px; }
+  #drawer-head select { position: absolute; inset: 0; width: 100%; opacity: 0; }
+  #drawer-head #branch-controls select { position: static; opacity: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+  #drawer-head #base-select { flex: 1 1 0; min-width: 0; max-width: none; }
+  #toolbar { padding: 0 12px; }
+  #toolbar #layout-seg, #toolbar #context-ctl, #toolbar .divider { display: none; }
+  /* the view switch gets a row of its own under the path, so the path keeps the whole first row */
+  .file-head { flex-wrap: wrap; row-gap: 2px; padding: 4px 12px; }
+  .file-head:has(> .seg)::after { content: ''; order: 8; flex-basis: 100%; }
+  .file-head .back-btn { width: 36px; height: 36px; border: 0; background: none; }
+  .file-head .seg { order: 9; margin-bottom: 2px; }
+  .overview-head { padding: 12px; }
+}
+#drawer-head:empty { display: none; }
+
+/* ---------------------------------------------------------------- reduced motion: no slides or fades */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+
+/* ---------------------------------------------------------------- forced colors (Windows high contrast)
+   The system replaces the colors and drops box shadows and gradients, which carry most of the state here. Selection,
+   "on" states and the target line get outlines in system colors; the code tables and the status dots keep their own
+   colors, since red and green are what a diff is made of. */
+@media (forced-colors: active) {
+  table.code, .live::before, .empty-state .watching::before, .dot { forced-color-adjust: none; }
+  table.code tr.target td.num { box-shadow: inset 4px 0 Highlight; }
+  .node.sel, #commits li.sel { outline: 2px solid Highlight; outline-offset: -2px; }
+  #modes button.on { border-bottom: 3px solid Highlight; padding-top: 3px; }
+  .seg button.on { outline: 2px solid Highlight; outline-offset: -1px; }
+  .seg button:disabled, .seg button[aria-disabled="true"], .menu button[aria-disabled="true"] { color: GrayText; }
+  #pane-split::before { background: CanvasText; }
+  #resizer:hover, #resizer.drag { background: Highlight; }
+  #toast { border: 1px solid CanvasText; }
+}

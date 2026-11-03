@@ -1,0 +1,7 @@
+.idea/
+/target/
+.claude/
+ui-tests/node_modules/
+ui-tests/test-results/
+ui-tests/playwright-report/
+CLAUDE.md

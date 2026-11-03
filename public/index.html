@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>revue</title>
+<link rel="stylesheet" href="vendor/hl-light.css" id="hl-light">
+<link rel="stylesheet" href="vendor/hl-dark.css" id="hl-dark">
+<link rel="stylesheet" href="style.css">
+<script src="theme.js"></script>
+<script src="vendor/highlight.min.js" defer></script>
+<script src="app.js" defer></script>
+</head>
+<body>
+<header id="top">
+  <button id="drawer-btn" class="icon-btn" aria-label="Files and commits" aria-expanded="false" aria-controls="side" title="Files and commits">☰</button>
+  <strong id="repo-name">…</strong>
+  <div class="repo" id="repo">
+    <div class="picker" id="branch-pick">
+      <span class="picker-face" aria-hidden="true"><span class="muted">⎇</span><b id="branch-name"></b><span id="branch-note" class="muted">checked out</span><span class="caret">▾</span></span>
+      <select id="view-branch" title="Branch to view (doesn't change your repo)" aria-label="Branch to view"></select>
+    </div>
+    <button id="checkout" hidden title="Run git switch to check out this branch">Check out</button>
+    <!-- a plain folder (not a git repo, or --no-git) shows this where the branch picker is -->
+    <span id="folder-tag" class="folder-tag" hidden title="Not a git repository: revue shows the folder's files">folder</span>
+  </div>
+  <nav id="modes" aria-label="Mode">
+    <button data-mode="working" title="Uncommitted changes vs HEAD (1)">Changes <span class="key">1</span></button>
+    <button data-mode="commit" title="Browse commits (2)">History <span class="key">2</span></button>
+    <button data-mode="branch" title="Branch vs base (3)">Branch <span class="key">3</span></button>
+  </nav>
+  <select id="mode-select" aria-label="Mode">
+    <option value="working">Changes</option><option value="commit">History</option><option value="branch">Branch</option>
+  </select>
+  <div id="branch-controls" hidden>
+    <label class="muted"><span class="long">compared with</span><span class="short" aria-hidden="true">vs</span> <select id="base-select" title="Base" aria-label="Compared with"></select></label>
+  </div>
+  <div class="spacer"></div>
+  <!-- role="img": one name, the whole message, whichever label shows (style.css shortens it in narrower windows) -->
+  <span id="stale" role="img" aria-label="Server out of date: restart revue" hidden title="Server out of date: restart revue. This server started before its code was updated on disk (an upgrade or rebuild of revue), so parts of this page may fail. Restart it, then reload the page."><span class="long">Server out of date: restart revue</span><span class="short">Restart</span></span>
+  <div id="status">
+    <button id="live" class="live" aria-label="Server status" aria-expanded="false" aria-controls="status-card"><span id="live-label">Connecting</span></button>
+    <div id="status-card" class="popover" role="tooltip" hidden></div>
+  </div>
+  <div id="keys">
+    <button id="keys-btn" class="icon-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="keys-panel" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+    <div id="keys-panel" class="popover" role="dialog" aria-label="Keyboard shortcuts" tabindex="-1" hidden>
+      <!-- .repo-only and .folder-only rows show only in a repo or only in a plain folder (style.css, .plain-folder) -->
+      <h3>Navigate</h3>
+      <dl>
+        <dt class="repo-only"><kbd>j</kbd> <kbd>k</kbd> <span class="muted">or</span> <kbd>n</kbd> <kbd>p</kbd></dt><dd class="repo-only">next / previous changed file</dd>
+        <dt class="folder-only"><kbd>j</kbd> <kbd>k</kbd> <span class="muted">or</span> <kbd>n</kbd> <kbd>p</kbd></dt><dd class="folder-only">next / previous file</dd>
+        <dt class="repo-only"><kbd>Esc</kbd></dt><dd class="repo-only">all changes</dd>
+        <dt class="folder-only"><kbd>Esc</kbd></dt><dd class="folder-only">the folder's README</dd>
+        <dt><kbd>/</kbd></dt><dd>filter files</dd>
+        <dt><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+click</dt><dd>go to definition (browser Back returns)</dd>
+      </dl>
+      <h3><span class="repo-only">File tree and commit list</span><span class="folder-only">File tree</span></h3>
+      <dl>
+        <dt><kbd>Tab</kbd></dt><dd>move into the list</dd>
+        <dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>previous / next row</dd>
+        <dt><kbd>→</kbd> <kbd>←</kbd></dt><dd>open / close a folder; <kbd>←</kbd> on a file or a closed folder moves up to its parent folder</dd>
+        <dt><kbd>Home</kbd> <kbd>End</kbd></dt><dd>first / last row</dd>
+        <dt class="repo-only"><kbd>Enter</kbd> <kbd>Space</kbd></dt><dd class="repo-only">open the row</dd>
+        <dt class="folder-only"><kbd>Enter</kbd> <kbd>Space</kbd></dt><dd class="folder-only">open the row; on a folder, also show its README</dd>
+      </dl>
+      <h3>View</h3>
+      <dl>
+        <dt class="repo-only"><kbd>f</kbd></dt><dd class="repo-only">diff → file → preview or image</dd>
+        <dt class="folder-only"><kbd>f</kbd></dt><dd class="folder-only">file ↔ preview (markdown) or image (SVG)</dd>
+        <dt class="repo-only"><kbd>s</kbd></dt><dd class="repo-only">split / unified</dd>
+        <dt><kbd>w</kbd></dt><dd>wrap long lines / scroll sideways</dd>
+        <dt class="repo-only"><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd class="repo-only">Changes / History / Branch</dd>
+        <dt><kbd>r</kbd></dt><dd>refresh</dd>
+        <dt><kbd>?</kbd></dt><dd>show or hide this list</dd>
+      </dl>
+    </div>
+  </div>
+  <div id="theme">
+    <button id="theme-btn" class="icon-btn" aria-haspopup="menu" aria-expanded="false"></button>
+    <div id="theme-menu" class="menu" role="menu" hidden>
+      <button role="menuitemradio" data-theme="auto"><span class="check">✓</span><span class="ico"></span>Auto <span class="muted">(system)</span></button>
+      <button role="menuitemradio" data-theme="light"><span class="check">✓</span><span class="ico"></span>Light</button>
+      <button role="menuitemradio" data-theme="dark"><span class="check">✓</span><span class="ico"></span>Dark</button>
+    </div>
+  </div>
+  <!-- narrow windows: theme, shortcuts and context move here -->
+  <div id="more">
+    <!-- a disclosure, not a role="menu": it holds a select and a group of radios, which a menu can't -->
+    <button id="more-btn" class="icon-btn" aria-expanded="false" aria-controls="more-menu" aria-label="More" title="More">⋯</button>
+    <div id="more-menu" class="menu" role="group" aria-label="More options" hidden>
+      <label class="menu-row diff-only" id="more-context-row">Context <select id="more-context" aria-label="Context lines"><option value="3">3</option><option value="10">10</option><option value="50">50</option><option value="all">all</option></select></label>
+      <div role="radiogroup" aria-labelledby="more-theme-title">
+        <div class="menu-title" id="more-theme-title">Theme</div>
+        <button role="radio" data-theme="auto"><span class="check">✓</span><span class="ico"></span>Auto <span class="muted">(system)</span></button>
+        <button role="radio" data-theme="light"><span class="check">✓</span><span class="ico"></span>Light</button>
+        <button role="radio" data-theme="dark"><span class="check">✓</span><span class="ico"></span>Dark</button>
+      </div>
+      <hr>
+      <button id="more-keys"><span class="check"></span>Keyboard shortcuts <kbd>?</kbd></button>
+    </div>
+  </div>
+</header>
+<div id="body">
+  <aside id="side">
+    <div id="drawer-head"></div>
+    <section id="commits-pane" hidden>
+      <div class="pane-head"><span class="pane-title">Commits</span><label class="muted"><input type="checkbox" id="all-branches"> all branches</label></div>
+      <!-- tabindex="-1" here and on #tree keeps the box out of the tab order: Firefox puts a box that scrolls in it, ahead of the row holding the list's tab stop -->
+      <ul id="commits" role="listbox" aria-label="Commits" tabindex="-1"></ul>
+    </section>
+    <div id="pane-split" role="separator" aria-orientation="horizontal" aria-label="Resize the commit list" aria-controls="commits-pane" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" tabindex="0" hidden></div>
+    <section id="tree-pane">
+      <div class="pane-head">
+        <input id="filter" placeholder="Filter files  ( / )" aria-label="Filter files" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="pane-head sub">
+        <label id="changed-only-ctl"><input type="checkbox" id="changed-only"> Changed only</label>
+        <span id="summary" class="muted"></span>
+      </div>
+      <div id="tree" role="tree" aria-label="Files" tabindex="-1"></div>
+    </section>
+  </aside>
+  <div id="resizer"></div>
+  <div id="scrim" hidden></div>
+  <div id="main-col">
+    <div id="toolbar">
+      <span id="view-label"></span>
+      <div class="spacer"></div>
+      <div id="notes-bar" hidden>
+        <button id="notes-next" title="Notes left by agents: jump to the next one"></button>
+        <button id="notes-other" hidden></button>
+        <div id="notes-more" hidden>
+          <button id="notes-menu-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="notes-menu" aria-label="Notes menu" title="Notes menu">▾</button>
+          <div id="notes-menu" class="menu" role="menu" hidden>
+            <button role="menuitem" id="notes-clear">Clear all notes in this view</button>
+          </div>
+        </div>
+      </div>
+      <span class="divider diff-only"></span>
+      <label class="diff-only" id="context-ctl" title="Context lines around changes">Context
+        <select id="context-select"><option value="3">3</option><option value="10">10</option><option value="50">50</option><option value="all">all</option></select>
+      </label>
+      <div class="seg diff-only" id="layout-seg" title="Diff layout (s)">
+        <button data-layout="split">Split</button><button data-layout="unified">Unified</button>
+      </div>
+    </div>
+    <main id="main" tabindex="-1"></main>
+  </div>
+</div>
+</body>
+</html>

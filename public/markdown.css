@@ -1,0 +1,38 @@
+/* The markdown preview, inside its shadow root (mdFrame in app.js): a GitHub-like reading view. Only what inherits
+   reaches in here from style.css (fonts, color-scheme and the color variables, so light-dark() works), so the few
+   page-wide rules the preview relied on are repeated here. An #anchor scrolls its heading to just below the sticky
+   file header (scrollBelowHead in app.js measures the header). */
+* { box-sizing: border-box; }
+input { font: inherit; color: inherit; }
+.markdown { max-width: 900px; padding: 16px 32px 48px; font-size: 15px; line-height: 1.6; overflow-wrap: break-word; }
+.markdown > :first-child { margin-top: 0; }
+.markdown h1, .markdown h2, .markdown h3, .markdown h4, .markdown h5, .markdown h6 { margin: 24px 0 12px; line-height: 1.25; font-weight: 600; }
+.markdown h1 { font-size: 2em; padding-bottom: .3em; border-bottom: 1px solid var(--border); }
+.markdown h2 { font-size: 1.5em; padding-bottom: .3em; border-bottom: 1px solid var(--border); }
+.markdown h3 { font-size: 1.25em; }
+.markdown h4 { font-size: 1em; }
+.markdown h5 { font-size: .875em; }
+.markdown h6 { font-size: .85em; color: var(--muted); }
+.markdown p, .markdown ul, .markdown ol, .markdown blockquote, .markdown pre, .markdown table, .markdown details { margin: 0 0 16px; }
+.markdown ul, .markdown ol { padding-left: 2em; }
+.markdown li + li { margin-top: .25em; }
+.markdown li:has(> input[type="checkbox"]) { list-style: none; }
+.markdown li > input[type="checkbox"] { margin: 0 .3em 0 -1.4em; vertical-align: middle; }
+.markdown a { color: var(--accent); text-decoration: none; }
+.markdown a[href]:hover { text-decoration: underline; }
+.markdown a:not([href]) { color: inherit; text-decoration: underline dotted; }
+.markdown code { font: .85em var(--mono); padding: .2em .4em; background: var(--bg3); border-radius: 6px; }
+.markdown pre { padding: 16px; overflow: auto; background: var(--bg2); border-radius: 6px; line-height: 1.45; }
+.markdown pre code { padding: 0; background: none; font-size: 13px; }
+.markdown blockquote { padding: 0 1em; color: var(--muted); border-left: .25em solid var(--border); }
+.markdown hr { height: .25em; margin: 24px 0; border: 0; background: var(--border); }
+.markdown table { display: block; width: max-content; max-width: 100%; overflow: auto; border-collapse: collapse; }
+.markdown th, .markdown td { padding: 6px 13px; border: 1px solid var(--border); }
+.markdown th { font-weight: 600; }
+.markdown tr:nth-child(2n) { background: var(--bg2); }
+.markdown .md-img { color: var(--muted); font-size: .9em; }
+/* The repo's own images (placeImage): scaled down to fit, never up; the width and height attributes (the image's own)
+   keep their place while they load, and a width the document gave is set on the element. */
+.markdown img { max-width: 100%; height: auto; box-sizing: content-box; }
+.markdown kbd { font: 11px var(--mono); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: var(--bg2); }
+.hljs { background: transparent !important; padding: 0 !important; }

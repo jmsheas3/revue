@@ -1,0 +1,17 @@
+{
+  "name": "revue-ui-tests",
+  "private": true,
+  "description": "Browser tests for revue's UI (public/), run with Playwright against the debug binary",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "install-browsers": "playwright install chromium firefox",
+    "typecheck": "tsc -p .",
+    "screenshots": "playwright test -c screenshots.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@types/node": "^26.6.5",
+    "typescript": "^5.9.3"
+  }
+}

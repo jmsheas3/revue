@@ -1,0 +1,30 @@
+[package]
+name = "revue"
+version = "0.1.0"
+edition = "2021"
+description = "A git change viewer that runs in your browser: live diffs of your uncommitted work, any commit or a whole branch."
+license = "MIT"
+repository = "https://github.com/jmsheas3/revue"
+rust-version = "1.88"
+include = ["/src/**", "/public/**", "/tests/**", "/build.rs", "/Cargo.toml", "/Cargo.lock", "/README.md", "/LICENSE", "/THIRD_PARTY_LICENSES"]
+
+[dependencies]
+fancy-regex = "0.14"
+gix = { version = "0.90", default-features = false, features = ["revision", "index", "max-performance", "sha1"] }
+libc = "0.2"
+serde = "1"
+serde_json = { version = "1", features = ["preserve_order"] }
+
+# Linux watches directory by directory with inotify directly (src/watcher.rs); elsewhere one native recursive watch.
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+notify = { version = "8.2", default-features = false, features = ["macos_fsevent"] }
+
+# Windows: process checks and Ctrl+C handling (discovery.rs, main.rs, mcp.rs). The same 0.61 that gix (through gix-sec
+# and gix-tempfile) already pulls in; notify 8.2 still uses 0.60, so Windows builds carry both.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Console", "Win32_System_Threading"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 4
+strip = true
