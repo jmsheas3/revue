@@ -256,9 +256,15 @@ test.describe('agent navigation', () => {
       await s.open(page);
       await s.open(other);
       await focusTab(other);
+      const claim = await other.evaluate(() => localStorage.getItem('revue.activeTab'));
+      expect(claim).toBeTruthy();
       await go(other);
 
-      // (The server's count of tabs isn't checked: the gone tab's stream may not have been dropped yet.)
+      // The claim is given up asynchronously: localStorage and the BroadcastChannel reach this tab some time after the
+      // close, and a tab that still sees another's claim when a navigate arrives ignores it. So wait for this tab to see
+      // the claim gone (it may have claimed itself on getting focus) before navigating; a claim that's never given up
+      // fails here. (The server's count of tabs isn't checked: the gone tab's stream may not have been dropped yet.)
+      await expect.poll(() => page.evaluate(() => localStorage.getItem('revue.activeTab'))).not.toBe(claim);
       await s.navigate({ file: 'a.txt', line: 2 });
       await expect(viewLabel(page)).toHaveText('a.txt');
       await expect(targetRows(page)).toHaveAttribute('data-n', '2');
