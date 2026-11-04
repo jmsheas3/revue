@@ -53,7 +53,9 @@ def main():
         "",
         "## Install",
         "",
-        "revue needs git. Each file below holds the `revue` binary, its license and the README.",
+        "revue needs git. Each archive below holds the `revue` binary, the README, revue's license (`LICENSE`) and"
+        " the licenses of what it's built from (`THIRD_PARTY_LICENSES` for the UI's libraries,"
+        " `THIRD_PARTY_LICENSES_RUST` for the Rust crates, also attached on its own).",
         "",
         f"- **macOS** (Apple Silicon and Intel): open `revue-{tag}-macos-universal.pkg`, which installs `revue` in"
         f" `/usr/local/bin`; or unpack `revue-{tag}-macos-universal.tar.gz` and put `revue` on your `PATH`. Both are"

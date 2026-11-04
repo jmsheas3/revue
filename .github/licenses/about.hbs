@@ -1,0 +1,28 @@
+Rust crates in the revue binary
+===============================
+
+The revue binary is compiled from revue's own code (MIT License, see LICENSE) and
+the Rust crates below, from crates.io. Each crate keeps its own license, given
+here from the crate's own license file, or as the license's standard text when
+the crate has none. A crate offered under a choice of licenses is listed under
+the one used here. The JavaScript libraries in revue's UI are listed in
+THIRD_PARTY_LICENSES.
+
+This one file covers the binaries for every platform, so it may name a few
+crates that a given binary doesn't include.
+
+Licenses (crates using each):
+{{#each overview}}
+  {{{name}}} ({{count}})
+{{/each}}
+{{#each licenses}}
+
+================================================================================
+{{{name}}}, used by:
+{{#each used_by}}
+  {{{crate.name}}} {{{crate.version}}}  {{#if crate.repository}}{{{crate.repository}}}{{else}}https://crates.io/crates/{{{crate.name}}}{{/if}}
+{{/each}}
+================================================================================
+
+{{{text}}}
+{{/each}}

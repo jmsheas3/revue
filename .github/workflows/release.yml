@@ -72,9 +72,27 @@ jobs:
           echo "sign=$sign" >> "$GITHUB_OUTPUT"
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
 
+  licenses:
+    name: Licenses
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: taiki-e/install-action@b80e2bb2635f28eb98b9fce1e2f0887e1535c6b2 # v2.90.0
+        with:
+          tool: cargo-about@0.9.3
+      - run: .github/scripts/licenses.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: THIRD_PARTY_LICENSES_RUST
+          path: THIRD_PARTY_LICENSES_RUST
+          if-no-files-found: error
+
   build:
     name: Build (${{ matrix.name }})
-    needs: plan
+    needs: [plan, licenses]
     strategy:
       fail-fast: false
       matrix:
@@ -129,6 +147,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./.github/scripts/smoke-test.ps1 -Binary out/revue.exe
+      # The crates' license notices, packaged with the binary.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: THIRD_PARTY_LICENSES_RUST
       - name: Package
         if: runner.os != 'Windows'
         run: .github/scripts/package.sh "$NAME" out/revue dist
@@ -139,7 +161,7 @@ jobs:
           $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.*)"$' | Select-Object -First 1).Matches[0].Groups[1].Value
           $base = "revue-v$version-$env:NAME"
           New-Item -ItemType Directory -Path "stage/$base", dist | Out-Null
-          Copy-Item out/revue.exe, LICENSE, THIRD_PARTY_LICENSES, README.md -Destination "stage/$base"
+          Copy-Item out/revue.exe, LICENSE, THIRD_PARTY_LICENSES, THIRD_PARTY_LICENSES_RUST, README.md -Destination "stage/$base"
           Compress-Archive -Path "stage/$base" -DestinationPath "dist/$base.zip"
           Get-ChildItem dist
       # The macOS archive here is unsigned; sign-macos makes the signed one that is released.
@@ -164,6 +186,9 @@ jobs:
         with:
           name: dist-macos-universal
           path: unsigned
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: THIRD_PARTY_LICENSES_RUST
       - name: Sign, notarize and package
         env:
           MACOS_APP_P12: ${{ secrets.MACOS_APP_P12 }}
@@ -250,11 +275,17 @@ jobs:
         with:
           name: signed-macos-universal
           path: release
+      # Also on its own, for the .pkg, which installs only the binary: installing notices under /usr/local/share
+      # could take over folders Homebrew owns on Intel Macs.
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: THIRD_PARTY_LICENSES_RUST
+          path: release
       - name: Checksums
         working-directory: release
         run: |
           ls -l
-          [ "$(ls | wc -l)" -eq 5 ] || { echo "::error::Expected 5 files to release"; exit 1; }
+          [ "$(ls | wc -l)" -eq 6 ] || { echo "::error::Expected 6 files to release"; exit 1; }
           sha256sum -- * > SHA256SUMS
           cat SHA256SUMS
       - name: Release notes

@@ -13,7 +13,7 @@ It's a single binary that needs only git. The UI is built in, and the server lis
 
 ## Install
 
-revue needs git. Each [release](https://github.com/jmsheas3/revue/releases) has a binary for each platform, packed with its license and this README:
+revue needs git. Each [release](https://github.com/jmsheas3/revue/releases) has a binary for each platform, packed with this README, revue's license and those of the libraries and Rust crates it's built from:
 
 - **macOS** (Apple Silicon and Intel, one universal binary): open `revue-v<version>-macos-universal.pkg`, which installs `revue` in `/usr/local/bin`, or unpack `revue-v<version>-macos-universal.tar.gz` and put `revue` anywhere on your `PATH`. Both are signed and notarized by Apple. To uninstall the `.pkg`: `sudo rm /usr/local/bin/revue && sudo pkgutil --forget io.github.jmsheas3.revue`.
 - **Linux** (x86_64 or ARM64): unpack `revue-v<version>-linux-x86_64.tar.gz` or `revue-v<version>-linux-arm64.tar.gz` and put `revue` on your `PATH`. It's a static binary, so it runs on any distribution.
@@ -177,7 +177,7 @@ npm run screenshots       # retake the screenshots above (docs/screenshot-*.png)
 
 ### Pull requests and releases
 
-Work goes into `develop` through pull requests, and `develop` goes into `main`. Every pull request into either runs the checks in [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `cargo test` on Linux (x86_64 and ARM64) and macOS, the browser tests, clippy for the Linux, macOS and Windows code, a build with the oldest Rust revue supports, `cargo audit`, a Windows build that has to start and serve a repo, and a check of the version in `Cargo.toml`. The one check both branches require, **CI passed**, passes only when all of those did. Only `develop` and `hotfix/…` branches can merge into `main`. The full `cargo test` also runs on Windows, without blocking anything, to show what still fails there.
+Work goes into `develop` through pull requests, and `develop` goes into `main`. Every pull request into either runs the checks in [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `cargo test` on Linux (x86_64 and ARM64) and macOS, the browser tests, clippy for the Linux, macOS and Windows code, a build with the oldest Rust revue supports, `cargo audit`, a check that every crate's license is one [`.github/licenses/about.toml`](.github/licenses/about.toml) accepts, a Windows build that has to start and serve a repo, and a check of the version in `Cargo.toml`. The one check both branches require, **CI passed**, passes only when all of those did. Only `develop` and `hotfix/…` branches can merge into `main`. The full `cargo test` also runs on Windows, without blocking anything, to show what still fails there.
 
 To release:
 
@@ -188,4 +188,4 @@ The merge to `main` runs every check again on the merged commit, builds the bina
 
 ## License
 
-MIT; see [LICENSE](LICENSE). The UI includes highlight.js (BSD-3-Clause), marked (MIT) and DOMPurify (Apache-2.0 or MPL-2.0), unmodified in `public/vendor/`; their license texts are in [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES).
+MIT; see [LICENSE](LICENSE). The UI includes highlight.js (BSD-3-Clause), marked (MIT) and DOMPurify (Apache-2.0 or MPL-2.0), unmodified in `public/vendor/`; their license texts are in [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES). The binaries are also built from Rust crates under their own licenses (MIT, Apache-2.0 and a few others); each release lists them, with their license texts, in `THIRD_PARTY_LICENSES_RUST`.
