@@ -79,8 +79,17 @@ fn untracked_line_counts_are_unchanged_cached_and_follow_edits() {
     write(root, "u/two.txt", "a\n\n\n");
     let later = std::time::SystemTime::now() + std::time::Duration::from_secs(5);
     std::fs::File::options().write(true).open(root.join("u/two.txt")).unwrap().set_modified(later).unwrap();
-    let ch = s.body("/api/tree", &[("mode", "working")])["changes"].clone();
-    assert_eq!(ch["u/two.txt"]["add"], 3);
+    // macOS's watcher can't see the events the OS still holds, so for a moment the tree remembered from before the
+    // edit can still be served there (without reading anything): wait for the new count.
+    let mut ch = Value::Null;
+    assert!(
+        wait_until(5000, || {
+            ch = s.body("/api/tree", &[("mode", "working")])["changes"].clone();
+            ch["u/two.txt"]["add"] == 3
+        }),
+        "{}",
+        ch["u/two.txt"]
+    );
     let names: Vec<String> = s.reads().iter().map(|p| p.rsplit('/').next().unwrap().to_string()).collect();
     assert_eq!(names, ["two.txt"]);
     // The counts reused from the cache are the same as the ones read.
