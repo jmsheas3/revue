@@ -24,6 +24,17 @@ fn files(tree: &Value) -> Vec<String> {
     tree["files"].as_array().unwrap().iter().map(|f| f.as_str().unwrap().to_string()).collect()
 }
 
+// The variable that puts `--notes file`'s data directory (folder::notes_file) in `data`, and the notes directory that
+// gives: XDG_DATA_HOME elsewhere, but macOS uses ~/Library/Application Support, so there HOME. Otherwise a test on a
+// Mac would write into the real one.
+fn data_home(data: &std::path::Path) -> (&'static str, std::path::PathBuf) {
+    if cfg!(target_os = "macos") {
+        ("HOME", data.join("Library/Application Support/revue/notes"))
+    } else {
+        ("XDG_DATA_HOME", data.join("revue/notes"))
+    }
+}
+
 #[test]
 fn a_folder_outside_any_repo_opens_as_a_plain_folder() {
     let dir = folder();
@@ -129,15 +140,20 @@ fn the_listing_stops_at_the_cap_and_watches_only_what_it_reached() {
     assert_eq!(tree["truncated"], true);
     // Breadth first, .git last: the top level, then the next one down, until the cap.
     assert_eq!(files(&tree), [".hidden/h.txt", "README.md", "docs/a.txt"]);
-    let watched = s.watched();
-    assert!(watched.contains(&"docs".to_string()), "{watched:?}");
-    assert!(!watched.iter().any(|w| w == "docs/deep" || w == "docs/deep/er" || w == ".git"), "{watched:?}");
+    // Linux watches folder by folder; macOS's one recursive watch lists only the root, and filters events instead.
+    if cfg!(target_os = "linux") {
+        let watched = s.watched();
+        assert!(watched.contains(&"docs".to_string()), "{watched:?}");
+        assert!(!watched.iter().any(|w| w == "docs/deep" || w == "docs/deep/er" || w == ".git"), "{watched:?}");
+    }
     // Changes outside the reached folders go unseen, so remembered answers expire instead.
     assert_eq!(s.body("/api/server", &[])["watcher"], "partial");
     // Under the cap, every folder is watched.
     let all = Server::start(root);
     assert_eq!(all.body("/api/tree", &[])["truncated"], false);
-    assert!(wait_until(3000, || all.watched().iter().any(|w| w == "docs/deep/er")), "{:?}", all.watched());
+    if cfg!(target_os = "linux") {
+        assert!(wait_until(3000, || all.watched().iter().any(|w| w == "docs/deep/er")), "{:?}", all.watched());
+    }
 }
 
 #[cfg(target_os = "linux")]
@@ -185,7 +201,8 @@ fn notes_are_filed_under_the_folder() {
 fn notes_in_a_file_go_to_the_data_directory() {
     let dir = folder();
     let data = TempDir::new("folder-data");
-    let env = [("XDG_DATA_HOME", data.path().to_str().unwrap())];
+    let (var, notes_dir) = data_home(data.path());
+    let env = [(var, data.path().to_str().unwrap())];
     let before = files(&Server::start(dir.path()).body("/api/tree", &[]));
     {
         let s = start(dir.path(), &["--notes", "file"], &env);
@@ -193,7 +210,6 @@ fn notes_in_a_file_go_to_the_data_directory() {
         assert_eq!(status, 200, "{body}");
         assert_eq!(s.body("/api/server", &[])["notes"], "file");
     }
-    let notes_dir = data.path().join("revue/notes");
     let saved: Vec<_> = std::fs::read_dir(&notes_dir).unwrap().flatten().map(|e| e.path()).collect();
     assert_eq!(saved.len(), 1, "{saved:?}");
     assert!(std::fs::read_to_string(&saved[0]).unwrap().contains("\"kept\""));
@@ -210,9 +226,10 @@ fn a_notes_directory_others_can_use_is_refused() {
     use std::os::unix::fs::PermissionsExt;
     let dir = folder();
     let data = TempDir::new("folder-data-open");
-    std::fs::create_dir_all(data.path().join("revue/notes")).unwrap();
-    std::fs::set_permissions(data.path().join("revue/notes"), std::fs::Permissions::from_mode(0o777)).unwrap();
-    let err = Server::try_start(dir.path(), &["--notes", "file"], &[("XDG_DATA_HOME", data.path().to_str().unwrap())]).err().unwrap();
+    let (var, notes_dir) = data_home(data.path());
+    std::fs::create_dir_all(&notes_dir).unwrap();
+    std::fs::set_permissions(&notes_dir, std::fs::Permissions::from_mode(0o777)).unwrap();
+    let err = Server::try_start(dir.path(), &["--notes", "file"], &[(var, data.path().to_str().unwrap())]).err().unwrap();
     assert_eq!(err.code, Some(1));
     assert!(err.stderr.contains("other users can use it"), "{}", err.stderr);
 }

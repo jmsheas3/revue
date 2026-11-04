@@ -1,0 +1,17 @@
+# Keeps the Actions the workflows use up to date: once a month, one PR into develop that moves every pinned commit
+# SHA (and its version comment) to the newest release. Crates and npm packages are updated by hand; cargo audit
+# flags a vulnerable crate.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/setup-rust
+    target-branch: develop
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: CI

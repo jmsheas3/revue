@@ -1,0 +1,3 @@
+# Check text files out with LF everywhere, Windows included: build.rs embeds public/ in the binary byte for byte,
+# and a CRLF checkout would ship different files (and ETags) on Windows. Binary files are detected and left alone.
+* text=auto eol=lf
