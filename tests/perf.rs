@@ -236,12 +236,12 @@ fn in_a_linked_worktree_a_working_file_edit_is_a_worktree_change() {
     git(root, &["branch", "other"]);
     let wt_dir = TempDir::new("perf-wt");
     let wt = wt_dir.path().join("wt");
-    git(root, &["worktree", "add", "-q", wt.to_str().unwrap(), "other"]);
+    git(root, &["worktree", "add", "-q", &git_path(&wt), "other"]);
     {
         let wt_server = Server::start(&wt);
         let ev = wt_server.events();
         std::fs::write(wt.join("a.txt"), "edited in the worktree\n").unwrap();
         assert_eq!(ev.next(2000).as_deref(), Some("worktree"));
     }
-    git(root, &["worktree", "remove", "--force", wt.to_str().unwrap()]);
+    git(root, &["worktree", "remove", "--force", &git_path(&wt)]);
 }
