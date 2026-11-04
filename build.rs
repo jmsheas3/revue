@@ -68,14 +68,18 @@ fn commit() {
         .and_then(|top| std::fs::canonicalize(top).ok())
         .is_some_and(|top| std::fs::canonicalize(dir).is_ok_and(|d| d == top));
     let hash = if own { git(&["rev-parse", "--short", "HEAD"]).unwrap_or_default() } else { String::new() };
-    let mut modified = false;
-    if !hash.is_empty() {
-        // A path that doesn't exist would make Cargo rerun this on every build, so only existing ones are named.
+    if own {
+        // Watched before the first commit too, when there is no hash yet: otherwise a build made then would report no
+        // commit until a build input changed. A path that doesn't exist would make Cargo rerun this on every build, so
+        // only existing ones are named; refs/heads exists from `git init` on, and a first commit adds its branch there.
         for p in ["HEAD", "refs/heads", "packed-refs"] {
             if let Some(path) = git(&["rev-parse", "--path-format=absolute", "--git-path", p]).filter(|p| Path::new(p).exists()) {
                 println!("cargo:rerun-if-changed={path}");
             }
         }
+    }
+    let mut modified = false;
+    if !hash.is_empty() {
         let mut args = vec!["status", "--porcelain", "--"];
         args.extend(BUILD_INPUTS);
         modified = git(&args).is_some_and(|s| !s.is_empty());
