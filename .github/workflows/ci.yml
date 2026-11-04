@@ -38,7 +38,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-rust
-      - run: cargo test --locked
+      # --no-fail-fast: one failing test file shouldn't hide the results of the ones after it.
+      - run: cargo test --locked --no-fail-fast
       # The script the release smoke-tests every binary with, run here on the test build so a change that breaks
       # it shows up before a release does.
       - name: Smoke test
