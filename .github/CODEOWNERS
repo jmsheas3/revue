@@ -1,0 +1,6 @@
+# Who owns what. A pull request into main or develop needs an approval from an owner of the files it changes (the
+# "Code owner review" ruleset), which a repository admin can bypass. GitHub never counts an author's approval of their
+# own pull request, so an owner's own PRs need another owner's approval, or the bypass.
+#
+# The last pattern that matches a file decides its owners: add a line below `*` to give a path other owners.
+* @jmsheas3

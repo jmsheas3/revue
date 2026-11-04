@@ -1,0 +1,31 @@
+# Only develop and hotfix/… branches of this repository may merge into main. The main ruleset requires this check
+# as well as "CI passed". It is a workflow of its own because it also has to run when a PR is retargeted (an
+# "edited" event), which shouldn't rerun all of CI: otherwise a feature branch's PR into develop could be retargeted
+# to main and merge on the checks it passed there.
+name: Source branch
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  source-branch:
+    name: Source branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Only develop and hotfix/… merge into main
+        env:
+          HEAD: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REPO" = "$REPO" ] && { [ "$HEAD" = develop ] || [[ "$HEAD" == hotfix/* ]]; }; then
+            echo "$HEAD may merge into main."
+            exit 0
+          fi
+          echo "::error title=Source branch::Only develop and hotfix/… branches of $REPO can merge into main, and this PR is from $HEAD_REPO:$HEAD. Open it against develop instead."
+          exit 1
