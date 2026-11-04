@@ -275,6 +275,8 @@ fn files() -> Vec<(String, String)> {
     let decoys: Vec<String> = (0..45).map(|i| format!("dec/d{i:02}.py")).collect();
     let mut out: Vec<(String, String)> = f.drain(..).map(|(p, t)| (p.to_string(), t)).collect();
     out.extend(decoys.into_iter().map(|p| (p, "class Gadget:\n    def spin(self):\n        pass\n".to_string())));
+    // Not the names with a newline in them on Windows, which can't make them.
+    out.retain(|(p, _)| can_name(p));
     out
 }
 

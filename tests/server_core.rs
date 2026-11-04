@@ -190,8 +190,9 @@ fn a_shallow_clone_shows_its_history_and_its_root_commit() {
     commit_all(src.path(), "two");
     let tmp = TempDir::new("core-shallow");
     let clone = tmp.path().join("clone");
-    let url = format!("file://{}", src.path().display());
-    git(tmp.path(), &["clone", "-q", "--depth", "1", &url, clone.to_str().unwrap()]);
+    // file:///tmp/… here, file://C:/… on Windows (git reads both).
+    let url = format!("file://{}", git_path(src.path()));
+    git(tmp.path(), &["clone", "-q", "--depth", "1", &url, &git_path(&clone)]);
     let (_rt, s) = start(&clone, &[]);
     let (status, log) = s.json("/api/log", &[]);
     assert_eq!(status, 200, "{log}");

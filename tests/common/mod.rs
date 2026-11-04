@@ -112,6 +112,23 @@ pub fn git(root: &Path, args: &[&str]) -> String {
     try_git(root, args).unwrap_or_else(|e| panic!("git {args:?}: {e}"))
 }
 
+// A path to pass to git as an argument. On Windows a TempDir is a verbatim path (\\?\C:\…, from canonicalize), and
+// git can't create anything under one ("Invalid argument"), so it gets C:/… instead. Servers keep the path as it is.
+pub fn git_path(p: &Path) -> String {
+    let s = p.to_str().unwrap();
+    if cfg!(windows) {
+        s.strip_prefix(r"\\?\").filter(|rest| rest.as_bytes().get(1) == Some(&b':')).unwrap_or(s).replace('\\', "/")
+    } else {
+        s.to_string()
+    }
+}
+
+// Whether a file can be given this name here: Windows refuses control characters (a tab, a newline) and any of
+// <>:"|?* in a name, so fixtures with such names leave those files out there.
+pub fn can_name(rel: &str) -> bool {
+    !cfg!(windows) || !rel.chars().any(|c| c.is_control() || "<>:\"|?*".contains(c))
+}
+
 pub fn init(root: &Path) {
     git(root, &["init", "-q", "-b", "main"]);
 }
@@ -413,10 +430,11 @@ impl Server {
         self.read_sizes().into_iter().map(|(p, _)| p).collect()
     }
 
-    // The same, with how many bytes each read took of its file.
+    // The same, with how many bytes each read took of its file. The paths are absolute, with / between their parts
+    // on Windows too, so tests can match them by their ends.
     pub fn read_sizes(&self) -> Vec<(String, u64)> {
         let reads = self.debug(&[])["reads"].clone();
-        reads.as_array().unwrap().iter().map(|r| (r["path"].as_str().unwrap().to_string(), r["bytes"].as_u64().unwrap())).collect()
+        reads.as_array().unwrap().iter().map(|r| (r["path"].as_str().unwrap().replace('\\', "/"), r["bytes"].as_u64().unwrap())).collect()
     }
 
     // An event stream, settled: registered, and with the messages for changes made before it connected (a commit

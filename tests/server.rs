@@ -65,10 +65,14 @@ fn context_0_gives_a_diff_with_no_context_lines() {
     assert!(dflt.lines().any(|l| l.starts_with("@@ -7,7 +7,7 @@")), "{dflt}");
 }
 
+// A name with a quote and a tab in it, which git quotes in its output. Windows can't make it.
+const QUOTED: &str = "k/q\"uote\there.txt";
+const QUOTED_MOVED: &str = "k/q\"uote\tmoved.txt";
+
 // Committed files, then one of each kind of working-tree change.
 fn change_kinds(root: &Path) {
     let ten = (1..=10).map(|i| format!("row {i}\n")).collect::<String>();
-    for f in ["k/mod.txt", "k/old name.txt", "k/gone.txt", "k/q\"uote\there.txt"] {
+    for f in ["k/mod.txt", "k/old name.txt", "k/gone.txt", QUOTED].into_iter().filter(|f| can_name(f)) {
         write(root, f, format!("{ten}{f}\n"));
     }
     write(root, "k/bin.dat", "a\0b");
@@ -76,7 +80,9 @@ fn change_kinds(root: &Path) {
     commit(root, "kinds");
     write(root, "k/mod.txt", format!("{}k/mod.txt\n", ten.replace("row 5", "row five")));
     git(root, &["mv", "k/old name.txt", "k/new näme.txt"]);
-    git(root, &["mv", "k/q\"uote\there.txt", "k/q\"uote\tmoved.txt"]);
+    if can_name(QUOTED) {
+        git(root, &["mv", QUOTED, QUOTED_MOVED]);
+    }
     std::fs::remove_file(root.join("k/gone.txt")).unwrap();
     write(root, "k/bin.dat", "c\0d");
     write(root, "k/added.txt", "staged\n");
@@ -92,18 +98,19 @@ fn tree_reports_every_kind_of_change() {
     let changes = untagged(body["changes"].clone());
     let k: serde_json::Map<String, Value> =
         changes.as_object().unwrap().iter().filter(|(p, _)| p.starts_with("k/")).map(|(p, v)| (p.clone(), v.clone())).collect();
-    assert_eq!(
-        Value::Object(k.clone()),
-        json!({
-            "k/mod.txt": { "status": "M", "add": 1, "del": 1 },
-            "k/new näme.txt": { "status": "R", "oldPath": "k/old name.txt", "add": 0, "del": 0 },
-            "k/q\"uote\tmoved.txt": { "status": "R", "oldPath": "k/q\"uote\there.txt", "add": 0, "del": 0 },
-            "k/gone.txt": { "status": "D", "add": 0, "del": 11 },
-            "k/bin.dat": { "status": "M", "add": null, "del": null },
-            "k/added.txt": { "status": "A", "add": 1, "del": 0 },
-            "k/new.txt": { "status": "?", "add": 2, "del": 0 },
-        })
-    );
+    let mut want = json!({
+        "k/mod.txt": { "status": "M", "add": 1, "del": 1 },
+        "k/new näme.txt": { "status": "R", "oldPath": "k/old name.txt", "add": 0, "del": 0 },
+        QUOTED_MOVED: { "status": "R", "oldPath": QUOTED, "add": 0, "del": 0 },
+        "k/gone.txt": { "status": "D", "add": 0, "del": 11 },
+        "k/bin.dat": { "status": "M", "add": null, "del": null },
+        "k/added.txt": { "status": "A", "add": 1, "del": 0 },
+        "k/new.txt": { "status": "?", "add": 2, "del": 0 },
+    });
+    if !can_name(QUOTED) {
+        want.as_object_mut().unwrap().remove(QUOTED_MOVED);
+    }
+    assert_eq!(Value::Object(k.clone()), want);
     let files: Vec<&str> = body["files"].as_array().unwrap().iter().map(|f| f.as_str().unwrap()).collect();
     for f in k.keys().map(|s| s.as_str()).chain(["a.txt"]) {
         assert!(files.contains(&f), "{f}");

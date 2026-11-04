@@ -50,11 +50,11 @@ fn a_remote_only_branch_becomes_a_local_tracking_branch() {
     let remote = tmp.path().join("remote.git");
     let root = tmp.path().join("repo");
     std::fs::create_dir_all(&root).unwrap();
-    git(tmp.path(), &["init", "-q", "--bare", "-b", "main", remote.to_str().unwrap()]);
+    git(tmp.path(), &["init", "-q", "--bare", "-b", "main", &git_path(&remote)]);
     init(&root);
     write(&root, "a.txt", "one\n");
     commit_all(&root, "init");
-    git(&root, &["remote", "add", "origin", remote.to_str().unwrap()]);
+    git(&root, &["remote", "add", "origin", &git_path(&remote)]);
     git(&root, &["switch", "-q", "-c", "topic"]);
     commit(&root, "topic work");
     git(&root, &["push", "-q", "origin", "main", "topic"]);
