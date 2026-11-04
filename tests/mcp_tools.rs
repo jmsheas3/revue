@@ -146,8 +146,16 @@ fn the_read_tools_describe_the_repo() {
 
     // An untracked binary file is listed as binary, as a staged one is, and adds nothing to the totals.
     write(dir.path(), "logo.bin", [0x89u8, b'P', 0, 1]);
-    let changes = m.ok("revue_changes", json!({ "repo": r }));
-    assert!(changes.starts_with("2 file(s) changed, +1 -1 (working tree vs HEAD)"), "{changes}");
+    // macOS's watcher can't see the events the OS still holds, so for a moment after an edit the answer remembered from
+    // before it can still be served there: wait for the new file.
+    let mut changes = String::new();
+    assert!(
+        wait_until(5000, || {
+            changes = m.ok("revue_changes", json!({ "repo": r }));
+            changes.starts_with("2 file(s) changed, +1 -1 (working tree vs HEAD)")
+        }),
+        "{changes}"
+    );
     assert!(changes.contains("U  logo.bin  binary"), "{changes}");
 }
 

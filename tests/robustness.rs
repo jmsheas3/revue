@@ -39,8 +39,10 @@ fn a_tab_that_stops_reading_does_not_hold_up_the_others() {
     let _stuck = stuck_tab(s.port);
     assert!(wait_until(2000, || s.body("/api/server", &[])["tabs"] == 1), "the stuck tab never registered");
 
-    // Navigate events go to every tab. A long file name makes each one big, so the stuck tab's socket fills fast.
-    let name = format!("{}x.txt", format!("{}/", "d".repeat(200)).repeat(15));
+    // Navigate events go to every tab. A long file name makes each one big, so the stuck tab's socket fills fast. macOS
+    // allows a path of 1,024 bytes at most, temp folder included (Linux 4,096).
+    let depth = if cfg!(target_os = "macos") { 3 } else { 15 };
+    let name = format!("{}x.txt", format!("{}/", "d".repeat(200)).repeat(depth));
     write(dir.path(), &name, "x\n");
     let body = json!({ "file": name }).to_string();
     let port = s.port;
