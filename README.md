@@ -13,7 +13,17 @@ It's a single binary that needs only git. The UI is built in, and the server lis
 
 ## Install
 
-You need git, and Rust 1.88 or later to build revue:
+revue needs git. Each [release](https://github.com/jmsheas3/revue/releases) has a binary for each platform, packed with its license and this README:
+
+- **macOS** (Apple Silicon and Intel, one universal binary): open `revue-v<version>-macos-universal.pkg`, which installs `revue` in `/usr/local/bin`, or unpack `revue-v<version>-macos-universal.tar.gz` and put `revue` anywhere on your `PATH`. Both are signed and notarized by Apple. To uninstall the `.pkg`: `sudo rm /usr/local/bin/revue && sudo pkgutil --forget io.github.jmsheas3.revue`.
+- **Linux** (x86_64 or ARM64): unpack `revue-v<version>-linux-x86_64.tar.gz` or `revue-v<version>-linux-arm64.tar.gz` and put `revue` on your `PATH`. It's a static binary, so it runs on any distribution.
+- **Windows** (x86_64), experimental: unzip `revue-v<version>-windows-x86_64.zip` and run `revue.exe`.
+
+`SHA256SUMS` in each release lists every file's SHA-256: `sha256sum -c SHA256SUMS --ignore-missing` checks the files you downloaded, and on macOS `shasum -a 256 <file>` prints one to compare.
+
+### From source
+
+You need Rust 1.88 or later to build revue:
 
 ```sh
 cargo install --locked --git https://github.com/jmsheas3/revue
@@ -21,7 +31,7 @@ cargo install --locked --git https://github.com/jmsheas3/revue
 
 That puts `revue` in `~/.cargo/bin`. `--locked` builds it with the dependency versions it's tested with (`Cargo.lock`); without it, cargo picks the newest ones, which may need a newer Rust. From a clone, `cargo install --locked --path .` does the same, and `cargo uninstall revue` removes it. An unrelated crate on crates.io is also called `revue`, so `cargo install revue` installs something else.
 
-revue is tested on Linux and macOS. The Windows code compiles but hasn't been run yet. The page needs a browser from 2024 or later (Chrome or Edge 123, Firefox 121, Safari 17.5); it's tested in Chromium and Firefox, not Safari.
+revue is tested on Linux and macOS. On Windows, CI checks that it builds, starts and serves a repo, but most of its tests don't run there yet. The page needs a browser from 2024 or later (Chrome or Edge 123, Firefox 121, Safari 17.5); it's tested in Chromium and Firefox, not Safari.
 
 ## Quick start
 
@@ -164,6 +174,17 @@ npm ci && npm run install-browsers   # once
 npm test                  # browser tests (Playwright, Chromium and Firefox)
 npm run screenshots       # retake the screenshots above (docs/screenshot-*.png)
 ```
+
+### Pull requests and releases
+
+Work goes into `develop` through pull requests, and `develop` goes into `main`. Every pull request into either runs the checks in [`.github/workflows/ci.yml`](.github/workflows/ci.yml): `cargo test` on Linux (x86_64 and ARM64) and macOS, the browser tests, clippy for the Linux, macOS and Windows code, a build with the oldest Rust revue supports, `cargo audit`, a Windows build that has to start and serve a repo, and a check of the version in `Cargo.toml`. The one check both branches require, **CI passed**, passes only when all of those did. Only `develop` and `hotfix/…` branches can merge into `main`. The full `cargo test` also runs on Windows, without blocking anything, to show what still fails there.
+
+To release:
+
+1. Raise `version` in `Cargo.toml`, run `cargo check` so `Cargo.lock` follows, and merge that into `develop`.
+2. Open a pull request from `develop` into `main`, and merge it with **Create a merge commit**.
+
+The merge to `main` runs every check again on the merged commit, builds the binaries, signs and notarizes the macOS ones, tests the installer on an Apple Silicon and an Intel Mac, and publishes everything as the release `v<version>`, which tags that commit. A release can't be changed afterwards, and its version can't be used again. A merge to `main` that doesn't raise the version builds the binaries (kept with the workflow run for 90 days) and releases nothing. `cargo audit` also runs every Monday on both branches, and Dependabot updates the workflows' Actions once a month.
 
 ## License
 

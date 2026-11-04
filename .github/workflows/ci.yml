@@ -1,0 +1,201 @@
+# Every check a change has to pass. Runs on pull requests into main and develop, and from release.yml on every
+# merge to main. The rulesets on both branches require one check, "CI passed", which passes only when every job it
+# lists under `needs` passed; add a new required job there. "Windows tests" is informational: it shows what fails on
+# Windows without blocking a merge.
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  workflow_call:
+
+permissions:
+  contents: read
+
+# A new push to a PR cancels its older run. A run called from release.yml gets a group of its own.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  test:
+    name: Tests (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux, os: ubuntu-latest }
+          - { name: Linux ARM, os: ubuntu-24.04-arm }
+          - { name: macOS, os: macos-latest }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - run: cargo test --locked
+      # The script the release smoke-tests every binary with, run here on the test build so a change that breaks
+      # it shows up before a release does.
+      - name: Smoke test
+        run: .github/scripts/smoke-test.sh target/debug/revue
+
+  ui:
+    name: UI tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ui-tests
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ui-tests/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox
+      - run: npm run typecheck
+      - run: npm test
+      - name: Keep the report and traces
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: |
+            ui-tests/playwright-report
+            ui-tests/test-results
+          retention-days: 14
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+        with:
+          components: clippy
+          targets: x86_64-pc-windows-gnu aarch64-apple-darwin
+      - name: Linux
+        run: cargo clippy --all-targets --locked -- -D warnings
+      # Checking needs no linker, so the Windows and macOS code (watcher.rs's notify backend, the Windows process
+      # and console calls) is checked from here too.
+      - name: Windows
+        run: cargo clippy --all-targets --locked --target x86_64-pc-windows-gnu -- -D warnings
+      - name: macOS
+        run: cargo clippy --all-targets --locked --target aarch64-apple-darwin -- -D warnings
+
+  msrv:
+    name: MSRV
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read rust-version from Cargo.toml
+        id: msrv
+        run: echo "version=$(sed -n 's/^rust-version = "\(.*\)"$/\1/p' Cargo.toml)" >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/setup-rust
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
+      # What `cargo install --locked` needs: the binary and the locked dependencies build with this Rust.
+      - run: cargo check --locked
+
+  audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: taiki-e/install-action@b80e2bb2635f28eb98b9fce1e2f0887e1535c6b2 # v2.90.0
+        with:
+          tool: cargo-audit
+      # Fails on a vulnerability in any crate in Cargo.lock. To accept one, add its ID with a reason to
+      # .cargo/audit.toml ([advisories] ignore = [...]).
+      - run: cargo audit
+
+  windows:
+    name: Windows smoke test
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - run: cargo build --locked
+      - name: Smoke test
+        shell: pwsh
+        run: ./.github/scripts/smoke-test.ps1 -Binary target/debug/revue.exe
+
+  windows-tests:
+    name: Windows tests (informational)
+    # Only on PRs: it isn't required, and a merge to main shouldn't wait for it.
+    if: github.event_name == 'pull_request'
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-rust
+      - name: cargo test (failures here don't block merging)
+        shell: bash
+        run: |
+          set +e
+          cargo test --locked --no-fail-fast 2>&1 | tee test.log
+          status=${PIPESTATUS[0]}
+          {
+            echo "### Windows tests"
+            if ! grep -q '^test result:' test.log; then
+              echo "cargo test stopped before running any tests (exit $status): see the job's log."
+            elif [ "$status" = 0 ]; then
+              echo "Every test that runs on Windows passed."
+            else
+              echo "These failed (they don't block merging):"
+              echo
+              grep -E '^test .* \.\.\. FAILED$' test.log | sed -E 's/^test (.*) \.\.\. FAILED$/- `\1`/'
+            fi
+            grep '^test result:' test.log | awk '{p+=$4; f+=$6; i+=$8} END {if (NR) printf "\n%d passed, %d failed, %d ignored\n", p, f, i}'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+  version:
+    name: Version check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: python3 .github/scripts/version.py check
+
+  ci-passed:
+    name: CI passed
+    if: always()
+    needs: [test, ui, clippy, msrv, audit, windows, version]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every required check passed
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          if echo "$NEEDS" | jq -e 'all(.[]; .result == "success")' > /dev/null; then exit 0; fi
+          echo "::error::Not every required check passed: see the jobs above."
+          exit 1

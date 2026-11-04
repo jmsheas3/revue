@@ -1,0 +1,40 @@
+name: Set up Rust
+description: >
+  Installs a pinned Rust toolchain with rustup (already on GitHub's runners) and makes it the default, then
+  optionally caches ~/.cargo and target/ between runs. The pinned version is the default of `toolchain` below:
+  bump it in a PR, so a new Rust release or a new clippy lint never turns CI red on its own.
+
+inputs:
+  toolchain:
+    description: Rust version to install
+    default: '1.94.0'
+  targets:
+    description: Extra targets, separated by spaces
+    default: ''
+  components:
+    description: Extra components, separated by spaces
+    default: ''
+  cache:
+    description: Cache the build between runs ('true' or 'false')
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Install Rust
+      shell: bash
+      env:
+        TOOLCHAIN: ${{ inputs.toolchain }}
+        TARGETS: ${{ inputs.targets }}
+        COMPONENTS: ${{ inputs.components }}
+      run: |
+        args="--profile minimal --no-self-update"
+        for c in $COMPONENTS; do args="$args --component $c"; done
+        for t in $TARGETS; do args="$args --target $t"; done
+        rustup toolchain install "$TOOLCHAIN" $args
+        rustup default "$TOOLCHAIN"
+        rustc --version
+        cargo --version
+    - name: Cache the build
+      if: inputs.cache == 'true'
+      uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
