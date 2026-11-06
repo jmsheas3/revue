@@ -21,8 +21,8 @@
 </p>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png">
-  <img alt="revue showing uncommitted changes to src/pricing.ts as a split diff with syntax highlighting. The file tree on the left marks changed, added and deleted files, and an agent's note sits under one of the changed lines." src="docs/screenshot-light.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/demo-dark.gif">
+  <img alt="A 17-second loop in revue: the overview shows five files a coding agent changed; the agent opens src/pricing.ts with its coupon change highlighted, and leaves a note on the tax line asking for a check; then the user edits that line, the diff updates live and the note is marked outdated." src="docs/demo-light.gif">
 </picture>
 
 ## ✨ Highlights

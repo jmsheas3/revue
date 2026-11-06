@@ -18,8 +18,10 @@ cargo test                # builds the binary and runs the API, live-update and 
 cd ui-tests
 npm ci && npm run install-browsers   # once
 npm test                  # browser tests (Playwright, Chromium and Firefox)
-npm run screenshots       # retake the README's screenshots (docs/screenshot-*.png)
+npm run screenshots       # retake the README's demo GIF and screenshots, and the social preview (needs ffmpeg)
 ```
+
+`npm run screenshots` writes `docs/demo-*.gif` (the README's demo), `docs/screenshot-*.png` and `docs/social-preview.png`, the card GitHub shows when the repo is linked elsewhere. GitHub doesn't read that card from the repo: upload it again in **Settings → General → Social preview** after it changes.
 
 To install your build: `cargo install --locked --path .` puts `revue` in `~/.cargo/bin`, and `cargo uninstall revue` removes it. `--locked` builds with the dependency versions revue is tested with (`Cargo.lock`); without it, cargo picks the newest ones, which may need a newer Rust.
 
