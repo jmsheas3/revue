@@ -53,21 +53,24 @@ def main():
         "",
         "## Install",
         "",
-        "revue needs git. Each archive below holds the `revue` binary, the README, revue's license (`LICENSE`) and"
-        " the licenses of what it's built from (`THIRD_PARTY_LICENSES` for the UI's libraries,"
-        " `THIRD_PARTY_LICENSES_RUST` for the Rust crates, also attached on its own).",
+        "revue needs git, and nothing else: no Rust, no Node. Each archive below holds the `revue` binary, the README"
+        " and its docs (`docs/`), revue's license (`LICENSE`) and the licenses of what it's built from"
+        " (`THIRD_PARTY_LICENSES` for the UI's libraries, `THIRD_PARTY_LICENSES_RUST` for the Rust crates, also"
+        " attached on its own).",
         "",
-        f"- **macOS** (Apple Silicon and Intel): open `revue-{tag}-macos-universal.pkg`, which installs `revue` in"
-        f" `/usr/local/bin`; or unpack `revue-{tag}-macos-universal.tar.gz` and put `revue` on your `PATH`. Both are"
+        "- **macOS** (Apple Silicon and Intel): open `revue-macos-universal.pkg`, which installs `revue` in"
+        " `/usr/local/bin`; or unpack `revue-macos-universal.tar.gz` and put `revue` on your `PATH`. Both are"
         " signed and notarized by Apple. To uninstall the `.pkg`:"
         " `sudo rm /usr/local/bin/revue && sudo pkgutil --forget io.github.jmsheas3.revue`.",
-        f"- **Linux** (x86_64 or ARM64): unpack `revue-{tag}-linux-x86_64.tar.gz` or `revue-{tag}-linux-arm64.tar.gz`"
-        " and put `revue` on your `PATH`. It's a static binary, so it runs on any distribution.",
-        f"- **Windows** (x86_64), **experimental**: unzip `revue-{tag}-windows-x86_64.zip` and run `revue.exe`. It"
-        " passes a smoke test, but most of revue's tests don't run on Windows yet.",
+        "- **Linux** (x86_64 or ARM64): unpack `revue-linux-x86_64.tar.gz` or `revue-linux-arm64.tar.gz` and put"
+        " `revue` on your `PATH`. It's a static binary, so it runs on any distribution.",
+        "- **Windows** (x86_64), **experimental**: unzip `revue-windows-x86_64.zip` and run `revue.exe`. It passes a"
+        " smoke test, but most of revue's tests don't run on Windows yet.",
         "",
         "To check a download, compare its SHA-256 with its line in `SHA256SUMS`:"
         " `sha256sum -c SHA256SUMS --ignore-missing` on Linux, `shasum -a 256 <file>` on macOS.",
+        "",
+        f"The README has [copy-paste install commands](https://github.com/{repo}/blob/{tag}/README.md#-install).",
         "",
     ]
     compare = f"compare/{previous}...{tag}" if previous else f"commits/{tag}"

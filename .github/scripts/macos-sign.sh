@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Signs and notarizes the macOS release, from the unsigned universal .tar.gz the build job made:
-#   <out-dir>/revue-v<version>-macos-universal.tar.gz  the binary signed with Developer ID Application (hardened
-#                                                       runtime, secure timestamp) and notarized
-#   <out-dir>/revue-v<version>-macos-universal.pkg     an installer that puts it in /usr/local/bin, signed with
-#                                                       Developer ID Installer, notarized, with its ticket stapled
+#   <out-dir>/revue-macos-universal.tar.gz  the binary signed with Developer ID Application (hardened runtime,
+#                                           secure timestamp) and notarized, packed by package.sh
+#   <out-dir>/revue-macos-universal.pkg     an installer that puts it in /usr/local/bin, signed with Developer ID
+#                                           Installer, notarized, with its ticket stapled
 # Apple can't staple a ticket to a bare binary, so macOS checks the .tar.gz's binary with Apple online on its first
 # run; the .pkg carries its ticket and installs offline.
 # Needs MACOS_APP_P12, MACOS_INSTALLER_P12, MACOS_P12_PASSWORD, APPLE_API_KEY, APPLE_API_KEY_ID and
@@ -88,7 +88,7 @@ notarize() { # file
 
 # The binary
 tar -xzf "$in" -C "$work"
-bin="$work/revue-v$version-macos-universal/revue"
+bin="$work/revue-macos-universal/revue"
 codesign --force --options runtime --timestamp --identifier "$pkg_id" --sign "$app_identity" --keychain "$keychain" "$bin"
 codesign --verify --strict --verbose=2 "$bin"
 codesign --display --verbose=2 "$bin"
@@ -100,7 +100,7 @@ mkdir -p "$out"
 # The installer
 mkdir "$work/pkgroot"
 cp "$bin" "$work/pkgroot/revue"
-pkg="$out/revue-v$version-macos-universal.pkg"
+pkg="$out/revue-macos-universal.pkg"
 pkgbuild --root "$work/pkgroot" --identifier "$pkg_id" --version "$version" --install-location /usr/local/bin \
   --sign "$installer_identity" --keychain "$keychain" --timestamp "$pkg"
 pkgutil --check-signature "$pkg"
