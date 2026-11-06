@@ -53,24 +53,16 @@ def main():
         "",
         "## Install",
         "",
-        "revue needs git, and nothing else: no Rust, no Node. Each archive below holds the `revue` binary, the README"
-        " and its docs (`docs/`), revue's license (`LICENSE`) and the licenses of what it's built from"
-        " (`THIRD_PARTY_LICENSES` for the UI's libraries, `THIRD_PARTY_LICENSES_RUST` for the Rust crates, also"
-        " attached on its own).",
+        f"revue needs only git. Pick the file for your platform below; the README has"
+        f" [copy-paste install commands](https://github.com/{repo}/blob/{tag}/README.md#-install).",
         "",
-        "- **macOS** (Apple Silicon and Intel): open `revue-macos-universal.pkg`, which installs `revue` in"
-        " `/usr/local/bin`; or unpack `revue-macos-universal.tar.gz` and put `revue` on your `PATH`. Both are"
-        " signed and notarized by Apple. To uninstall the `.pkg`:"
-        " `sudo rm /usr/local/bin/revue && sudo pkgutil --forget io.github.jmsheas3.revue`.",
-        "- **Linux** (x86_64 or ARM64): unpack `revue-linux-x86_64.tar.gz` or `revue-linux-arm64.tar.gz` and put"
-        " `revue` on your `PATH`. It's a static binary, so it runs on any distribution.",
-        "- **Windows** (x86_64), **experimental**: unzip `revue-windows-x86_64.zip` and run `revue.exe`. It passes a"
-        " smoke test, but most of revue's tests don't run on Windows yet.",
+        "- **macOS** (Apple Silicon and Intel): `revue-macos-universal.pkg`, which installs `revue` in"
+        " `/usr/local/bin`, or `revue-macos-universal.tar.gz`. Both are signed and notarized by Apple.",
+        "- **Linux**: `revue-linux-x86_64.tar.gz` or `revue-linux-arm64.tar.gz`, static binaries for any distribution.",
+        "- **Windows** (experimental): `revue-windows-x86_64.zip`.",
         "",
-        "To check a download, compare its SHA-256 with its line in `SHA256SUMS`:"
-        " `sha256sum -c SHA256SUMS --ignore-missing` on Linux, `shasum -a 256 <file>` on macOS.",
-        "",
-        f"The README has [copy-paste install commands](https://github.com/{repo}/blob/{tag}/README.md#-install).",
+        "`SHA256SUMS` lists every file's SHA-256. Each archive also holds the README, its docs and the license"
+        " notices; `THIRD_PARTY_LICENSES_RUST` is attached on its own too, since the `.pkg` installs only the binary.",
         "",
     ]
     compare = f"compare/{previous}...{tag}" if previous else f"commits/{tag}"

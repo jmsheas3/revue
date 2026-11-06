@@ -2,9 +2,9 @@
 
 Everything revue shows you, and how it decides what to show. For the keys, see [Keyboard shortcuts](keyboard-shortcuts.md).
 
-- [Three modes](#-three-modes)
 - [Coding agents](#-coding-agents)
 - [Live updates](#-live-updates)
+- [Three modes](#-three-modes)
 - [The whole file tree](#-the-whole-file-tree)
 - [Any branch, without checking it out](#-any-branch-without-checking-it-out)
 - [Diffs](#-diffs)
@@ -15,19 +15,9 @@ Everything revue shows you, and how it decides what to show. For the keys, see [
 - [Stays local](#-stays-local)
 - [Themes and narrow windows](#-themes-and-narrow-windows)
 
-## 🔀 Three modes
-
-| Mode | Key | What it shows |
-|---|---|---|
-| **Changes** | `1` | Uncommitted work compared with `HEAD`: staged, unstaged and untracked changes together, one diff per file. |
-| **History** | `2` | The branch's commits (or every branch's), and each one's diff; a merge's against its first parent. |
-| **Branch** | `3` | A branch compared with its base from their merge-base, like a pull request. |
-
-Branch mode's base is the first of `main`, `master`, `origin/main`, `origin/master` and `develop` that exists. **Compared with** picks another.
-
 ## 🤖 Coding agents
 
-Over [MCP](mcp.md), an agent can open its changes in your browser, scroll you to the lines it means and leave notes on them. If a revue tab is open, it moves to what the agent wants to show you, and Back returns to where you were.
+Over [MCP](mcp.md), an agent can open its changes in your browser, scroll you to the lines it means and leave notes on them. [How your tab follows it](mcp.md#-how-it-behaves).
 
 Notes appear under the lines they're about, in diffs and in the file view. They're marked *outdated* when those lines change afterwards.
 
@@ -37,7 +27,17 @@ Notes appear under the lines they're about, in diffs and in the file view. They'
 
 ## ⚡ Live updates
 
-A file watcher pushes changes to the page as you edit, commit or switch branches. The **Live** dot in the header says whether updates are connected; hover over it for the server's version, port, uptime and open tabs. With live updates off, `r` catches up.
+A file watcher pushes changes to the page as you edit, commit or switch branches. The **Live** dot in the header says whether updates are connected; hover over it for the server's version, port, uptime and open tabs. If the file watcher stops, that card says so, and `r` refreshes by hand.
+
+## 🔀 Three modes
+
+| Mode | Key | What it shows |
+|---|---|---|
+| **Changes** | `1` | Uncommitted work compared with `HEAD`: staged, unstaged and untracked changes together, one diff per file. |
+| **History** | `2` | The branch's commits (or every branch's), and each one's diff; a merge's against its first parent. |
+| **Branch** | `3` | A branch compared with its base from their merge-base, like a pull request. |
+
+Branch mode's base is the first of `main`, `master`, `origin/main`, `origin/master` and `develop` that exists. **Compared with** picks another.
 
 ## 🌳 The whole file tree
 
@@ -60,7 +60,7 @@ The branch picker in the header shows any local or remote branch. History and Br
 
 While the picker shows another branch, a **Check out** button runs a real `git switch` after you confirm. See [what revue changes](security.md#-what-revue-changes).
 
-## 🎨 Diffs
+## 🆚 Diffs
 
 - Split or unified, with syntax highlighting and the changed part of each line marked.
 - Context can be 3, 10 or 50 lines, or the whole file.

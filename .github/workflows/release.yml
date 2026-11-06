@@ -158,10 +158,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          # As package.sh does: no version in the name, and the docs the README links to.
+          # As package.sh does: no version in the name, and the files the README links to.
           $base = "revue-$env:NAME"
           New-Item -ItemType Directory -Path "stage/$base/docs", dist | Out-Null
-          Copy-Item out/revue.exe, LICENSE, THIRD_PARTY_LICENSES, THIRD_PARTY_LICENSES_RUST, README.md -Destination "stage/$base"
+          Copy-Item out/revue.exe, LICENSE, THIRD_PARTY_LICENSES, THIRD_PARTY_LICENSES_RUST, README.md, SECURITY.md -Destination "stage/$base"
           Copy-Item docs/*.md -Destination "stage/$base/docs"
           Compress-Archive -Path "stage/$base" -DestinationPath "dist/$base.zip"
           Get-ChildItem dist

@@ -20,7 +20,7 @@ The tree lists every file, hidden ones and anything under `.git/` included, up t
 - Files open in the file view (images as pictures), markdown in the preview, and SVG drawn in its Image view.
 - Live updates, agent notes, line targets and the narrow-window drawer work as in a repo.
 
-The keys are listed under [Keyboard shortcuts](keyboard-shortcuts.md#in-a-plain-folder).
+The keys are listed under [Keyboard shortcuts](keyboard-shortcuts.md#-in-a-plain-folder).
 
 ## ✋ Nothing is written into the folder
 
@@ -31,5 +31,3 @@ With [`--notes file`](options.md), notes go to revue's data directory instead of
 | Linux | `$XDG_DATA_HOME/revue/notes/`, or `~/.local/share/revue/notes/` |
 | macOS | `~/Library/Application Support/revue/notes/` |
 | Windows | `%LOCALAPPDATA%\revue\notes\` |
-
-A repo's server and a `--no-git` server on the same folder are separate servers.

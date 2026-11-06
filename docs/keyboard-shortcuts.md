@@ -2,7 +2,7 @@
 
 Press `?` in revue (or click the `?` button in the header) to see these at any time.
 
-## In a repo
+## 💻 In a repo
 
 | Keys | What they do |
 |---|---|
@@ -17,9 +17,9 @@ Press `?` in revue (or click the `?` button in the header) to see these at any t
 | `r` | Refresh |
 | `?` | Show or hide the shortcut list |
 
-Split needs about 60 characters a side: diffs are unified when the pane is narrower than that, and while wrapping is off (`w`).
+Split needs room: when it doesn't fit, diffs are unified (see [Diffs](features.md#-diffs)).
 
-## In the file tree and the commit list
+## 🌳 In the file tree and the commit list
 
 | Keys | What they do |
 |---|---|
@@ -30,7 +30,7 @@ Split needs about 60 characters a side: diffs are unified when the pane is narro
 | `Home` `End` | First / last row |
 | `Enter` `Space` | Open the row |
 
-## In a plain folder
+## 📁 In a plain folder
 
 [Plain folders](plain-folders.md) have no modes or diffs, so a few keys change:
 

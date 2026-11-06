@@ -16,5 +16,3 @@ revue mcp [--lifetime session|detached] [--notes memory|file] [--idle-timeout MI
 | `--lifetime session\|detached` | `REVUE_LIFETIME` | `session` | `revue mcp` only: whether the servers it starts stop with the agent session or keep running |
 | `-V`, `--version` | | | Print the version and the commit it was built from |
 | `-h`, `--help` | | | Print the usage |
-
-revue prints the page's address when it starts. Ctrl+C stops it.

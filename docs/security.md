@@ -1,6 +1,6 @@
 # 🔒 What revue changes, and security
 
-revue is a local server that reads your code, so here is exactly what it touches and who can reach it.
+revue is a local server that reads your code, so here is exactly what it touches and who can reach it. To report a vulnerability, see [SECURITY.md](../SECURITY.md).
 
 ## 💾 What revue changes
 
@@ -22,5 +22,5 @@ revue is a local server that reads your code, so here is exactly what it touches
 - Paths and refs from the page are checked so nothing outside the repo is read, and symlinks that lead out of it aren't followed.
 - The markdown preview is sanitized and loads nothing but the repo's own images, through revue, and the page runs under a strict Content Security Policy.
 - Images are served only as images, and sandboxed when opened in a tab of their own. An SVG, which can hold script, is drawn only as an image, where browsers run none of it, and opening one on its own downloads it.
-- An image whose header claims more than 50 million pixels is refused rather than handed to your browser to decode. So is an SVG that would draw more than 50,000 elements: a `<use>` draws a copy of a group that can hold more of them, so a file of a kilobyte can draw millions and freeze the tab. Images an SVG embeds as `data:` URLs, which an image does load, are held to the same limits, all of them together, and one revue can't check is refused.
+- Images that could freeze or crash the tab are refused rather than handed to your browser ([the limits](features.md#-images)). A small file's header can claim a huge number of pixels, and an SVG's `<use>` draws a copy of a group that can hold more of them, so a file of a kilobyte can draw millions of elements. Images an SVG embeds as `data:` URLs, which an image does load, count toward the same limits.
 - An SVG within every limit can still be slow to draw: filters (a large blur, say), patterns and markers take time without adding elements, and nothing measures that short of drawing it. Such a file can hold its tab for a while; closing the tab recovers.

@@ -1,14 +1,14 @@
 <h1 align="center">👀 revue</h1>
 
 <p align="center">
-  <b>Code review for the agentic era.</b><br>
-  A git change viewer that runs in your browser. See what your coding agent changed, with its notes on the lines that
-  matter, or read over your own work before you commit. Live, next to the full file tree.
+  <b>Let your coding agent show you what it changed.</b><br>
+  A git change viewer that runs in your browser: your agent opens its changes for you, scrolls you to the lines that
+  matter and leaves notes on them. Or read over your own work before you commit. Live, next to the full file tree.
 </p>
 
 <p align="center">
   <a href="https://github.com/jmsheas3/revue/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/jmsheas3/revue?logo=github&label=release"></a>
-  <img alt="Platforms: macOS, Linux and Windows" src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-informational">
+  <a href="https://github.com/jmsheas3/revue/actions/workflows/release.yml?query=branch%3Amain"><img alt="Release build status" src="https://github.com/jmsheas3/revue/actions/workflows/release.yml/badge.svg?branch=main&event=push"></a>
   <a href="docs/mcp.md"><img alt="MCP server built in" src="https://img.shields.io/badge/MCP-built%20in-8A2BE2"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/jmsheas3/revue"></a>
 </p>
@@ -17,7 +17,7 @@
   <a href="#-install">📦 Install</a> ·
   <a href="#-quick-start">🚀 Quick start</a> ·
   <a href="#-use-it-with-coding-agents">🤖 Agents</a> ·
-  <a href="docs/README.md">📚 Docs</a>
+  <a href="#-documentation">📚 Docs</a>
 </p>
 
 <picture>
@@ -27,13 +27,13 @@
 
 ## ✨ Highlights
 
-- 🔀 **Three modes**: **Changes** (your uncommitted work), **History** (any commit) and **Branch** (a branch against its base, like a pull request).
 - 🤖 **Made for coding agents**: over MCP, an agent opens its changes for you, points you at lines and leaves notes on them.
 - ⚡ **Live**: the page updates as you edit, commit or switch branches.
+- 🔀 **Three modes**: **Changes** (your uncommitted work), **History** (any commit) and **Branch** (a branch against its base, like a pull request).
 - 🌳 **The whole file tree** with changes marked, for any local or remote branch, without checking it out.
-- 🎨 **Split or unified diffs** with syntax highlighting and the changed part of each line marked.
+- 🆚 **Split or unified diffs** with syntax highlighting and the changed part of each line marked.
 - 🧭 **Go to definition**: Ctrl+click (⌘+click) a name to jump to where it's defined.
-- 🖼️ **Images and markdown**: changed images before and after, side by side, and a sanitized markdown preview.
+- 📷 **Images and markdown**: changed images before and after, side by side, and a sanitized markdown preview.
 - 📁 **Plain folders**: point it at any folder to browse its files and docs.
 - 🔒 **Stays local**: it listens on 127.0.0.1 only, and changes your files only when you check out a branch ([security](docs/security.md)).
 
@@ -41,9 +41,9 @@
 
 ## 📦 Install
 
-Download, unpack, run. revue is a single binary that needs only **git**: no Rust, no Node, no runtime.
+Download, unpack, run. revue is a single binary that **needs git** and a **browser from 2024 or later** (Chrome or Edge 123, Firefox 121, Safari 17.5; it's tested in Chromium and Firefox), and no Rust, Node or other runtime.
 
-| Platform | Download | |
+| Platform | Download | Notes |
 |---|---|---|
 | 🍎 **macOS** (Apple Silicon and Intel) | [`.pkg` installer](https://github.com/jmsheas3/revue/releases/latest/download/revue-macos-universal.pkg) · [`.tar.gz`](https://github.com/jmsheas3/revue/releases/latest/download/revue-macos-universal.tar.gz) | Signed and notarized by Apple |
 | 🐧 **Linux** x86_64 | [`revue-linux-x86_64.tar.gz`](https://github.com/jmsheas3/revue/releases/latest/download/revue-linux-x86_64.tar.gz) | Static, runs on any distribution |
@@ -75,19 +75,19 @@ curl -fsSL https://github.com/jmsheas3/revue/releases/latest/download/revue-linu
 sudo install revue-linux-x86_64/revue /usr/local/bin/
 ```
 
-On ARM64 (`uname -m` says `aarch64`), use `revue-linux-arm64` in both lines. Without `sudo`, `install -D revue-linux-x86_64/revue ~/.local/bin/revue` puts it in your home folder instead.
+On ARM64 (`uname -m` says `aarch64`), use `revue-linux-arm64` in both lines. Without `sudo`, `install -D revue-linux-x86_64/revue ~/.local/bin/revue` puts it in your home folder instead; make sure `~/.local/bin` is on your `PATH`.
 </details>
 
 <details>
 <summary>🪟 <b>Windows</b> from PowerShell</summary>
 
 ```powershell
-Invoke-WebRequest https://github.com/jmsheas3/revue/releases/latest/download/revue-windows-x86_64.zip -OutFile revue.zip
-Expand-Archive revue.zip -DestinationPath .
+Invoke-WebRequest https://github.com/jmsheas3/revue/releases/latest/download/revue-windows-x86_64.zip -OutFile revue-windows-x86_64.zip
+Expand-Archive revue-windows-x86_64.zip -DestinationPath . -Force
 .\revue-windows-x86_64\revue.exe --version
 ```
 
-Move `revue.exe` to a folder on your `PATH` to run it as `revue`. Windows support is experimental: CI checks that revue builds, starts and serves a repo there, but most of its tests don't run on Windows yet.
+Move `revue.exe` to a folder on your `PATH` to run it as `revue`. To update, stop any running revue first: Windows can't replace a `revue.exe` that is running.
 </details>
 
 <details>
@@ -97,14 +97,16 @@ Every release lists each file's SHA-256 in `SHA256SUMS`:
 
 ```sh
 curl -fsSLO https://github.com/jmsheas3/revue/releases/latest/download/SHA256SUMS
-sha256sum -c SHA256SUMS --ignore-missing    # checks the files you downloaded
-shasum -a 256 revue-macos-universal.pkg     # on macOS: prints one to compare
+sha256sum -c SHA256SUMS --ignore-missing    # Linux: checks the files you downloaded
+shasum -a 256 revue-macos-universal.pkg     # macOS: prints the hash to compare with SHA256SUMS
+```
+
+```powershell
+(Get-FileHash revue-windows-x86_64.zip).Hash   # Windows: compare with SHA256SUMS (case doesn't matter)
 ```
 </details>
 
 🔄 **Updating:** download again and replace the binary. A revue that is still running shows a **Server out of date** badge until you restart it.
-
-🧩 **Works with** git on Linux and macOS (Windows is experimental) and a browser from 2024 or later: Chrome or Edge 123, Firefox 121, Safari 17.5. It's tested in Chromium and Firefox, not Safari.
 
 ### 🦀 From source
 
@@ -114,7 +116,7 @@ With Rust 1.88 or later:
 cargo install --locked --git https://github.com/jmsheas3/revue
 ```
 
-That puts `revue` in `~/.cargo/bin`. ⚠️ `cargo install revue` installs an unrelated crate that has the same name.
+That puts `revue` in `~/.cargo/bin`, and `cargo uninstall revue` removes it. ⚠️ `cargo install revue` installs an unrelated crate that has the same name.
 
 ## 🚀 Quick start
 
@@ -152,13 +154,17 @@ Then ask things like 💬 *"show me the code changes"*, *"show me the lines you 
 
 ## 📚 Documentation
 
-- ✨ [Features](docs/features.md): modes, coding agents, live updates, the file tree, diffs, go to definition, images, markdown
+- ✨ [Features](docs/features.md): coding agents, live updates, modes, the file tree, diffs, go to definition, images, markdown
 - ⌨️ [Keyboard shortcuts](docs/keyboard-shortcuts.md): every key, in a repo and in a plain folder
 - 📁 [Plain folders](docs/plain-folders.md): a document viewer for any folder
 - 🤖 [Coding agents (MCP)](docs/mcp.md): setup, tools and server lifetimes
 - ⚙️ [Command-line options](docs/options.md): every flag and environment variable
 - 🔒 [Security](docs/security.md): what revue writes, who can reach it, and how it treats repo content
-- 🛠️ [Contributing](docs/CONTRIBUTING.md): building, testing, pull requests and releases
+- 🤝 [Contributing](docs/CONTRIBUTING.md): building, testing, pull requests and releases
+
+## 🤝 Contributing
+
+Bug reports and ideas are welcome as [issues](https://github.com/jmsheas3/revue/issues). Pull requests go into `develop`; [CONTRIBUTING](docs/CONTRIBUTING.md) explains how to build, test and release. To report a vulnerability, please follow [SECURITY.md](SECURITY.md) instead of opening an issue.
 
 ## 📄 License
 

@@ -1,4 +1,6 @@
-# 🛠️ Contributing to revue
+# 🤝 Contributing to revue
+
+Bug reports and ideas are welcome as [issues](https://github.com/jmsheas3/revue/issues). To report a vulnerability, follow [SECURITY.md](../SECURITY.md) instead.
 
 ## 🗺️ How it's built
 
@@ -23,9 +25,9 @@ To install your build: `cargo install --locked --path .` puts `revue` in `~/.car
 
 ## 📚 Docs
 
-The README stays short. Details live in `docs/`, which is packed into every release archive next to the README, so keep links between them relative. When you change a shortcut, update `docs/keyboard-shortcuts.md` along with the `?` panel in `public/index.html`.
+The README stays short. Details live in `docs/`, which is packed into every release archive next to the README, so keep links between them relative. When you change a shortcut, update the `?` panel in `public/index.html`, the README's Quick start table and `docs/keyboard-shortcuts.md`.
 
-## 🔀 Pull requests
+## 📥 Pull requests
 
 Work goes into `develop` through pull requests, and `develop` goes into `main`. Every pull request into either runs the checks in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml):
 
@@ -38,9 +40,9 @@ Work goes into `develop` through pull requests, and `develop` goes into `main`. 
 - a Windows build that has to start and serve a repo
 - a check of the version in `Cargo.toml`
 
-The one check both branches require, **CI passed**, passes only when all of those did. Only `develop` and `hotfix/…` branches can merge into `main`. A pull request also needs an approval from a code owner ([`.github/CODEOWNERS`](../.github/CODEOWNERS)), which a repository admin can bypass; the checks can't be bypassed. The full `cargo test` also runs on Windows, without blocking anything, to show what still fails there.
+The one check both branches require, **CI passed**, passes only when all of those did. Only `develop` and `hotfix/…` branches can merge into `main`. A pull request also needs an approval from a code owner ([`.github/CODEOWNERS`](../.github/CODEOWNERS)), which a repository admin can bypass; the checks can't be bypassed. The full `cargo test` also runs on Windows, but isn't required to pass there yet.
 
-## 🚀 Releases
+## 🚢 Releases
 
 1. Raise `version` in `Cargo.toml`, run `cargo check` so `Cargo.lock` follows, and merge that into `develop`.
 2. Open a pull request from `develop` into `main`, and merge it with **Create a merge commit**.
