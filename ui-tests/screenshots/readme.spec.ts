@@ -1,12 +1,12 @@
-// The README's demo GIF and screenshots, of revue on a small made-up shop project with uncommitted work, in the light
-// and the dark theme. `npm run screenshots` (screenshots.config.ts) writes them to docs/: demo-{light,dark}.gif (see
-// the demo's test), screenshot-{light,dark}.png, one file's split diff with an agent note on it, and social-preview.png,
-// the card GitHub shows for the repo's links. `npm test` never runs this.
+// The README's demo GIF and GitHub's social preview card, of revue on a small made-up shop project with uncommitted
+// work. `npm run screenshots` (screenshots.config.ts) writes them to docs/: demo-{light,dark}.gif, in the light and the
+// dark theme (see the demo's test), and social-preview.png, the card GitHub shows for the repo's links. `npm test`
+// never runs this.
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Page } from '@playwright/test';
-import { test, expect, Repo, REPO_ROOT, section, targetRows, treeRow } from '../fixtures';
+import { test, expect, Repo, REPO_ROOT, section, targetRows } from '../fixtures';
 
 const SCHEMES = ['light', 'dark'] as const;
 // The GIF's width: the 1440 px page, downscaled with Lanczos from its 2x screenshots, so it stays sharp at the width
@@ -172,7 +172,11 @@ function makeShop(dir: string): Repo {
   return repo;
 }
 
-test('README screenshots', async ({ folder, revue, page }) => {
+// GitHub's social preview card (docs/social-preview.png, uploaded by hand in the repo's Settings → General → Social
+// preview): the name and tagline beside the new side of src/pricing.ts's split diff around the agent's note, in the
+// light theme, which reads on most sites' backgrounds. GitHub wants 2:1 (1280x640 is best) and under 1 MB. The 👀 needs
+// an emoji font.
+test('Social preview card', async ({ folder, revue, page }) => {
   const repo = makeShop(folder.dir);
   const server = await revue.start({ folder: repo });
   await server.annotate({ mode: 'working', file: 'src/pricing.ts', line: TAX_LINE, side: 'new', text: NOTE });
@@ -181,23 +185,11 @@ test('README screenshots', async ({ folder, revue, page }) => {
   await server.open(page, 'mode=working&file=src/pricing.ts');
   await expect(page.locator('#main table.code.split')).toBeVisible();
   await expect(page.locator('#main .note-box')).toContainText('discounted price');
-  await expect(treeRow(page, 'src/coupons.ts')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   await page.mouse.move(0, 0);
-
+  await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
   const out = path.join(REPO_ROOT, 'docs');
   fs.mkdirSync(out, { recursive: true });
-  for (const scheme of SCHEMES) {
-    await page.emulateMedia({ colorScheme: scheme });
-    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
-    await page.screenshot({ path: path.join(out, `screenshot-${scheme}.png`), animations: 'disabled', caret: 'hide' });
-  }
-
-  // GitHub's social preview card (docs/social-preview.png, uploaded by hand in the repo's Settings → General → Social
-  // preview): the name and tagline beside the new side of the diff around the agent's note, in the light theme, which
-  // reads on most sites' backgrounds. GitHub wants 2:1 (1280x640 is best) and under 1 MB. The 👀 needs an emoji font.
-  await page.emulateMedia({ colorScheme: 'light' });
-  await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
   const note = await page.locator('#main .note-box').boundingBox();
   expect(note, 'the note is on the page').not.toBeNull();
   const crop = { x: note!.x, y: note!.y - 330, width: note!.width, height: note!.height + 400 };
