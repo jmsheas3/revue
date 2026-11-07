@@ -1,4 +1,5 @@
-// Takes the README's screenshots (screenshots/readme.spec.ts, written to docs/ at the repo root): npm run screenshots.
+// Takes the README's demo GIF and screenshots, and GitHub's social preview card (screenshots/readme.spec.ts, written to
+// docs/ at the repo root; the GIF needs ffmpeg): npm run screenshots.
 // A config of its own, so npm test never runs it. Chromium only, at 2x for sharp text on high-density screens, and
 // 1440x760: at 1280 px wide the diff is too narrow for split and falls back to unified, and 760 high ends the shot
 // just below the diff.

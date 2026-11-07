@@ -158,10 +158,11 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $version = (Select-String -Path Cargo.toml -Pattern '^version = "(.*)"$' | Select-Object -First 1).Matches[0].Groups[1].Value
-          $base = "revue-v$version-$env:NAME"
-          New-Item -ItemType Directory -Path "stage/$base", dist | Out-Null
-          Copy-Item out/revue.exe, LICENSE, THIRD_PARTY_LICENSES, THIRD_PARTY_LICENSES_RUST, README.md -Destination "stage/$base"
+          # As package.sh does: no version in the name, and the files the README links to.
+          $base = "revue-$env:NAME"
+          New-Item -ItemType Directory -Path "stage/$base/docs", dist | Out-Null
+          Copy-Item out/revue.exe, LICENSE, THIRD_PARTY_LICENSES, THIRD_PARTY_LICENSES_RUST, README.md, SECURITY.md -Destination "stage/$base"
+          Copy-Item docs/*.md -Destination "stage/$base/docs"
           Compress-Archive -Path "stage/$base" -DestinationPath "dist/$base.zip"
           Get-ChildItem dist
       # The macOS archive here is unsigned; sign-macos makes the signed one that is released.
@@ -197,7 +198,7 @@ jobs:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
-        run: .github/scripts/macos-sign.sh unsigned/revue-v*-macos-universal.tar.gz signed
+        run: .github/scripts/macos-sign.sh unsigned/revue-macos-universal.tar.gz signed
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: signed-macos-universal
