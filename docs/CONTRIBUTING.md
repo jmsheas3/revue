@@ -27,7 +27,7 @@ To install your build: `cargo install --locked --path .` puts `revue` in `~/.car
 
 ## 📚 Docs
 
-The README stays short. Details live in `docs/`, which is packed into every release archive next to the README, so keep links between them relative. When you change a shortcut, update the `?` panel in `public/index.html`, the README's Quick start table and `docs/keyboard-shortcuts.md`.
+The README stays short. Details live in `docs/`, which is packed into every release archive next to the README, so keep links between them relative. The README's install commands are tested: [`install-check.yml`](../.github/workflows/install-check.yml) runs the code block after each `<!-- install-check: … -->` comment on fresh Linux, macOS and Windows machines against the latest release, after every release, every Monday and on pull requests that change the README. Keep those comments above their blocks when you edit them. When you change a shortcut, update the `?` panel in `public/index.html`, the README's Quick start table and `docs/keyboard-shortcuts.md`.
 
 ## 📥 Pull requests
 
