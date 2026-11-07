@@ -1,0 +1,173 @@
+# Installs the latest release on fresh machines exactly as the README says, and checks the result. The commands come
+# out of README.md itself (readme-commands.py reads the code block after each `<!-- install-check: … -->` marker), so
+# the README and what's tested can't drift apart. On each platform it runs the README's install commands, checks that
+# `revue` is the release (the release's own smoke test, from its tag), runs the README's checksum lines, and on macOS
+# runs the README's uninstall command.
+#
+# Runs after every release (release.yml calls it once the release is published), every Monday, by hand, and on pull
+# requests that change the README or this check. It never blocks a merge or a release: a failure means the README's
+# instructions for that platform are broken.
+name: Install check
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 6 * * 1'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - README.md
+      - .github/workflows/install-check.yml
+      - .github/scripts/readme-commands.py
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Latest release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      tag: ${{ steps.latest.outputs.tag }}
+    steps:
+      - id: latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag=$(gh release view --json tagName --jq .tagName)
+          echo "Checking the README's instructions against $tag, the latest release"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+  unix:
+    name: ${{ matrix.name }}
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Linux x86_64, os: ubuntu-latest, platform: linux, arch: x86_64 }
+          - { name: Linux ARM64, os: ubuntu-24.04-arm, platform: linux, arch: arm64 }
+          - { name: macOS Apple Silicon, os: macos-latest, platform: macos, arch: arm64 }
+          - { name: macOS Intel, os: macos-15-intel, platform: macos, arch: x86_64 }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash # -eo pipefail, which a step without a shell doesn't get
+    env:
+      PLATFORM: ${{ matrix.platform }}
+      ARCH: ${{ matrix.arch }}
+      LATEST: https://github.com/${{ github.repository }}/releases/latest/download
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The release's own sources: the smoke test checks the binary against their version and commit.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+          path: release
+          persist-credentials: false
+      - name: Install with the README's commands
+        run: |
+          machine=$(uname -m)
+          [ "$machine" = aarch64 ] && machine=arm64
+          [ "$machine" = "$ARCH" ] || { echo "::error::Expected an $ARCH machine, got $(uname -m)"; exit 1; }
+          cmds=$(python3 .github/scripts/readme-commands.py "$PLATFORM")
+          # The README: "On ARM64 (uname -m says aarch64), use revue-linux-arm64 in both lines."
+          if [ "$PLATFORM-$ARCH" = linux-arm64 ]; then cmds=${cmds//revue-linux-x86_64/revue-linux-arm64}; fi
+          echo "$cmds"
+          mkdir "$RUNNER_TEMP/install"
+          cd "$RUNNER_TEMP/install"
+          bash -euxo pipefail -c "$cmds"
+          [ "$(command -v revue)" = /usr/local/bin/revue ] \
+            || { echo "::error::revue isn't /usr/local/bin/revue on PATH: $(command -v revue || echo missing)"; exit 1; }
+      - name: Smoke test
+        run: release/.github/scripts/smoke-test.sh "$(command -v revue)"
+      - name: Check the download with the README's checksum lines
+        run: |
+          cmds=$(python3 .github/scripts/readme-commands.py verify --os "$PLATFORM")
+          echo "$cmds"
+          cd "$RUNNER_TEMP/install"
+          if [ "$PLATFORM" = linux ]; then
+            # The README unpacks the archive straight from curl, so there is no file to check yet: download it as one.
+            name=revue-linux-$ARCH.tar.gz
+            curl -fsSLO "$LATEST/$name"
+            bash -euxo pipefail -c "$cmds" | tee out.txt
+            grep -qxF "$name: OK" out.txt || { echo "::error::sha256sum didn't check $name"; exit 1; }
+          else
+            # macOS's line prints the .pkg's hash for the reader to compare with SHA256SUMS: compare it here.
+            printed=$(bash -euxo pipefail -c "$cmds" | tail -n 1)
+            echo "$printed"
+            grep -qxF "$printed" SHA256SUMS || { echo "::error::'$printed' isn't a line of SHA256SUMS"; exit 1; }
+          fi
+      - name: Uninstall with the README's command
+        if: matrix.platform == 'macos'
+        run: |
+          cmds=$(python3 .github/scripts/readme-commands.py macos-uninstall)
+          echo "$cmds"
+          bash -euxo pipefail -c "$cmds"
+          [ ! -e /usr/local/bin/revue ] || { echo "::error::/usr/local/bin/revue is still there"; exit 1; }
+          if pkgutil --pkg-info io.github.jmsheas3.revue > /dev/null 2>&1; then
+            echo "::error::macOS still has the package's receipt"; exit 1
+          fi
+
+  windows:
+    name: Windows
+    needs: release
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      LATEST: https://github.com/${{ github.repository }}/releases/latest/download
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+          path: release
+          persist-credentials: false
+      - name: Install with the README's commands
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cmds = python .github/scripts/readme-commands.py windows
+          if ($LASTEXITCODE -ne 0) { throw 'readme-commands.py failed' }
+          $work = Join-Path $env:RUNNER_TEMP install
+          New-Item -ItemType Directory -Path $work | Out-Null
+          $script = Join-Path $work install.ps1
+          Set-Content -Path $script -Value $cmds
+          Get-Content $script
+          Push-Location $work
+          $out = & $script
+          $status = $LASTEXITCODE
+          Pop-Location
+          $out
+          if ($status -ne 0) { throw "The README's commands ended with exit code $status" }
+          # Their last line is `revue.exe --version`.
+          if ("$out" -notmatch '^revue \S+ \([0-9a-f]+\)$') { throw "revue.exe --version printed '$out'" }
+          "REVUE_EXE=$(Join-Path $work 'revue-windows-x86_64\revue.exe')" >> $env:GITHUB_ENV
+      - name: Smoke test
+        run: ./release/.github/scripts/smoke-test.ps1 -Binary $env:REVUE_EXE
+      - name: Check the download with the README's checksum line
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cmds = python .github/scripts/readme-commands.py verify-windows
+          if ($LASTEXITCODE -ne 0) { throw 'readme-commands.py failed' }
+          $cmds
+          Set-Location (Join-Path $env:RUNNER_TEMP install)
+          # The README says to compare the printed hash with SHA256SUMS: fetch it and compare.
+          Invoke-WebRequest "$env:LATEST/SHA256SUMS" -OutFile SHA256SUMS
+          $printed = (Invoke-Expression ($cmds -join "`n") | Out-String).Trim()
+          $printed
+          $line = Select-String -Path SHA256SUMS -Pattern '  revue-windows-x86_64\.zip$' | Select-Object -First 1
+          if (-not $line) { throw 'SHA256SUMS has no line for revue-windows-x86_64.zip' }
+          $expected = $line.Line.Split(' ')[0]
+          if ($printed -ne $expected) { throw "Get-FileHash printed $printed; SHA256SUMS says $expected" }
+          "Get-FileHash matches SHA256SUMS: $expected"
