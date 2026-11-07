@@ -1,6 +1,6 @@
 [package]
 name = "revue"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "A git change viewer that runs in your browser: live diffs of your uncommitted work, any commit or a whole branch."
 license = "MIT"

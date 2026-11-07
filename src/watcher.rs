@@ -939,6 +939,11 @@ fn backend_start(inner: &Arc<Inner>, tx: Sender<Ev>) -> Result<(), String> {
             if ev.paths.is_empty() {
                 send(Ev::Unknown { in_git: true });
             }
+            // Windows reports a folder as modified when a file in it is added, removed or renamed, and that file's
+            // own event comes too. For the .git folder that would make every index refresh (git takes index.lock and
+            // renames it over the index) look like a git change, so a change to the .git folder in place is dropped;
+            // its creation, removal or a rename of it still counts.
+            let in_place = matches!(ev.kind, notify::EventKind::Modify(k) if !matches!(k, notify::event::ModifyKind::Name(_)));
             for p in ev.paths {
                 let rel = map.iter().find_map(|(base, key)| {
                     let r = p.strip_prefix(base).ok()?.to_string_lossy().replace('\\', "/");
@@ -949,6 +954,7 @@ fn backend_start(inner: &Arc<Inner>, tx: Sender<Ev>) -> Result<(), String> {
                     })
                 });
                 match rel {
+                    Some(rel) if in_place && rel == ".git" && p.is_dir() => {}
                     Some(rel) if !rel.is_empty() => send(Ev::Path { rel, rename: false }),
                     _ => send(Ev::Unknown { in_git: true }),
                 }

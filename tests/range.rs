@@ -26,11 +26,18 @@ struct Renames {
     renames: String,
 }
 
-// Renames in one commit, with awkward names.
+// Renames in one commit, with awkward names: the ones with a tab in them only where a file can have one (not
+// Windows).
+const ROOT_FILES: [&str; 4] = ["keep\ttab.txt", "old name.txt", "tab\there.txt", "ünï.txt"];
+
+fn tabs() -> bool {
+    can_name("\t")
+}
+
 fn renames() -> Renames {
     let dir = new_repo("renames");
     let root = dir.path();
-    for f in ["old name.txt", "ünï.txt", "tab\there.txt", "keep\ttab.txt"] {
+    for f in ROOT_FILES.into_iter().filter(|f| can_name(f)) {
         write(root, f, lines(10, None));
     }
     commit_all(root, "root");
@@ -39,8 +46,10 @@ fn renames() -> Renames {
     std::fs::create_dir(root.join("dír")).unwrap();
     git(root, &["mv", "ünï.txt", "dír/ünï moved.txt"]);
     write(root, "dír/ünï moved.txt", lines(10, Some(4)));
-    git(root, &["mv", "tab\there.txt", "tab\tmoved.txt"]);
-    write(root, "keep\ttab.txt", lines(10, Some(2)));
+    if tabs() {
+        git(root, &["mv", "tab\there.txt", "tab\tmoved.txt"]);
+        write(root, "keep\ttab.txt", lines(10, Some(2)));
+    }
     commit_all(root, "renames");
     let renames = rev(root, "HEAD");
     let s = Server::start(root);
@@ -101,9 +110,11 @@ fn changes_parses_a_rename_with_edits_and_unicode_paths() {
 fn changes_handles_a_tab_in_renamed_and_modified_paths() {
     let r = renames();
     let ch = tree_changes(&r.s, &[("mode", "commit"), ("ref", &r.renames)]);
-    assert_eq!(ch["tab\tmoved.txt"], json!({ "status": "R", "oldPath": "tab\there.txt", "add": 0, "del": 0 }));
-    assert_eq!(ch["keep\ttab.txt"], json!({ "status": "M", "add": 1, "del": 1 }));
-    assert_eq!(ch.as_object().unwrap().len(), 4);
+    if tabs() {
+        assert_eq!(ch["tab\tmoved.txt"], json!({ "status": "R", "oldPath": "tab\there.txt", "add": 0, "del": 0 }));
+        assert_eq!(ch["keep\ttab.txt"], json!({ "status": "M", "add": 1, "del": 1 }));
+    }
+    assert_eq!(ch.as_object().unwrap().len(), if tabs() { 4 } else { 2 });
     // The rename's diff is found through its old path.
     let (status, d) = r.s.json("/api/diff", &[("mode", "commit"), ("ref", &r.renames), ("path", "dír/ünï moved.txt"), ("old", "ünï.txt")]);
     assert_eq!(status, 200);
@@ -173,7 +184,7 @@ fn commit_mode_on_a_root_commit_compares_against_the_empty_tree() {
     let ch = ch.as_object().unwrap();
     let mut keys: Vec<&String> = ch.keys().collect();
     keys.sort();
-    assert_eq!(keys, ["keep\ttab.txt", "old name.txt", "tab\there.txt", "ünï.txt"]);
+    assert_eq!(keys, ROOT_FILES.into_iter().filter(|f| can_name(f)).collect::<Vec<_>>());
     for c in ch.values() {
         assert_eq!(c, &json!({ "status": "A", "add": 10, "del": 0 }));
     }
