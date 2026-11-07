@@ -230,7 +230,8 @@ jobs:
         run: |
           [ "$(uname -m)" = "$ARCH" ] || { echo "::error::Expected an $ARCH Mac, got $(uname -m)"; exit 1; }
           pkg=$(ls signed/*.pkg)
-          xcrun stapler validate "$pkg"
+          # stapler looks the ticket up with Apple online, so a dropped connection is retried (retry.sh).
+          .github/scripts/retry.sh xcrun stapler validate "$pkg"
           spctl --assess --type install --verbose=2 "$pkg"
           sudo installer -pkg "$pkg" -target /
           pkgutil --pkg-info io.github.jmsheas3.revue
