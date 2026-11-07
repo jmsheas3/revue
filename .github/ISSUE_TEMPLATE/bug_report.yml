@@ -1,0 +1,71 @@
+name: Bug report
+description: Something in revue doesn't work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting it! For a security problem, please don't open an issue: report it privately, as [SECURITY.md](https://github.com/jmsheas3/revue/blob/main/SECURITY.md) explains.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Ideally with a small repo or file that shows it.
+      placeholder: |
+        1. In a repo with …
+        2. Run `revue` and …
+        3. …
+  - type: input
+    id: version
+    attributes:
+      label: Output of `revue --version`
+      placeholder: revue 0.2.0 (1a2b3c4)
+    validations:
+      required: true
+  - type: dropdown
+    id: started
+    attributes:
+      label: How revue was started
+      options:
+        - By hand (`revue` in a terminal)
+        - By a coding agent, through `revue mcp`
+    validations:
+      required: true
+  - type: input
+    id: agent
+    attributes:
+      label: The agent, if one started it
+      placeholder: Claude Code, VS Code with Copilot, Cursor, Codex, …
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version
+      placeholder: macOS 15.4, Ubuntu 24.04, Windows 11 24H2, …
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Chrome 140, Firefox 143, Safari 18.5, …
+  - type: textarea
+    id: output
+    attributes:
+      label: Error output
+      description: Anything revue printed in the terminal, and any errors in the browser's console.
+      render: shell
