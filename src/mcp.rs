@@ -165,7 +165,7 @@ fn stop_detached(root: &str, port: u16, pid: u32) {
     }
 }
 
-const STALE: &str = "its code changed on disk after it started, so the page may be out of date";
+const STALE: &str = "changed on disk after it started, so the page may be out of date";
 
 // Reuse a server for this repo (ours, or one found through discovery), or start one. `persist` overrides --lifetime
 // for this call: true = detached, false = session. Returns the server and whether it was started now.
@@ -186,9 +186,9 @@ fn ensure_server(st: &State, root: &str, git: bool, persist: Option<bool>) -> R<
             Some(s) => {
                 if s["stale"] == true {
                     remark(st, if k.server.is_some() {
-                        format!("this MCP server's {STALE}; reconnect it (for example /mcp in Claude Code) to load the new code.")
+                        format!("this MCP server's code {STALE}; reconnect it (for example /mcp in Claude Code) to load the new code.")
                     } else {
-                        format!("the revue server on port {} {STALE}; restart it to load the new code.", k.port)
+                        format!("the code of the revue server on port {} {STALE}; restart it to load the new code.", k.port)
                     });
                 }
                 return Ok((k, false));
@@ -215,7 +215,7 @@ fn ensure_server(st: &State, root: &str, git: bool, persist: Option<bool>) -> R<
                     replace_detached = true;
                     break;
                 }
-                remark(st, format!("the revue server on port {port} ({lifetime}) {STALE}; restart it to load the new code."));
+                remark(st, format!("the code of the revue server on port {port} ({lifetime}) {STALE}; restart it to load the new code."));
             }
             let rec = Rec { port, lifetime, server: None };
             st.servers.lock().unwrap().insert(key, rec.clone());
@@ -231,7 +231,7 @@ fn ensure_server(st: &State, root: &str, git: bool, persist: Option<bool>) -> R<
         Rec { port: srv.port(), lifetime: "session".into(), server: Some(Arc::new(srv)) }
     };
     if replace_detached {
-        remark(st, format!("replaced a detached revue server whose {STALE}."));
+        remark(st, format!("replaced a detached revue server whose code {STALE}."));
     }
     st.servers.lock().unwrap().insert(key, rec.clone());
     Ok((rec, true))
