@@ -4,23 +4,54 @@
 
 ## 🔌 Set it up
 
-For Claude Code:
+### Claude Code
 
 ```sh
 claude mcp add revue -- revue mcp            # this project only (revue on PATH, or give its full path)
 claude mcp add -s user revue -- revue mcp    # every project
 ```
 
-Other MCP clients take the same command. In a client that's configured with JSON, that's usually:
-
-```json
-{ "mcpServers": { "revue": { "command": "revue", "args": ["mcp"] } } }
-```
-
-To pass [options](options.md) with Claude Code, put them after `mcp`:
+To pass [options](options.md), put them after `mcp`:
 
 ```sh
 claude mcp add revue -- revue mcp --notes file
+```
+
+### Antigravity CLI
+
+```sh
+agy mcp add revue revue mcp
+agy mcp list                   # check that revue is there
+```
+
+### Cursor CLI
+
+Cursor has no `mcp add` command, so add revue to `~/.cursor/mcp.json` (in a file that lists other servers already, add it to their `mcpServers`):
+
+```json
+{ "mcpServers": { "revue": { "type": "stdio", "command": "revue", "args": ["mcp"] } } }
+```
+
+Then approve it, which you only need to do once, and check that its tools are listed:
+
+```sh
+agent mcp enable revue
+agent mcp list-tools revue
+```
+
+### GitHub Copilot CLI
+
+```sh
+copilot mcp add revue -- revue mcp
+copilot mcp list                      # check that revue is there
+```
+
+### Other MCP clients
+
+They take the same command. In a client that's configured with JSON, that's usually:
+
+```json
+{ "mcpServers": { "revue": { "command": "revue", "args": ["mcp"] } } }
 ```
 
 ## 💬 Try it
@@ -49,7 +80,7 @@ Ask things like:
 ### Arguments
 
 - **The view.** Every view-dependent tool takes the same `mode` (`working`, `commit` or `branch`) and `ref`/`base`/`head` arguments as the page.
-- **The repo.** A `repo` argument picks the repository (any folder inside it). Without it, tools use the folder `revue mcp` was started in. Claude Code starts it in your project, but a client that starts it somewhere else, such as your home folder, should pass `repo`, or that folder opens as a plain folder.
+- **The repo.** A `repo` argument picks the repository (any folder inside it). Without it, tools use the folder `revue mcp` was started in. Claude Code, Antigravity CLI, Cursor CLI and GitHub Copilot CLI start it in your project, but a client that starts it somewhere else, such as your home folder, should pass `repo`, or that folder opens as a plain folder.
 - **New tabs.** `revue_open`, `revue_show` and `revue_annotate` take `newTab: true` to open a new tab even when one is open.
 - **Plain folders.** A folder outside any repo, or any folder with `git: false`, opens as a [plain folder](plain-folders.md): `revue_open`, `revue_show`, the notes tools and `revue_definitions` work on its files, and `revue_changes`, `revue_diff` and `revue_log` say it isn't a git repository. A repo's server and a `git: false` server on the same folder are separate servers.
 

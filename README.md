@@ -152,7 +152,7 @@ revue prints the page's address and listens on port 4777, or on a free port if t
 claude mcp add -s user revue -- revue mcp
 ```
 
-Other MCP clients take the same command, usually as `{ "mcpServers": { "revue": { "command": "revue", "args": ["mcp"] } } }`.
+Using Antigravity CLI, Cursor CLI or GitHub Copilot CLI? [Here's how to add it](docs/mcp.md#-set-it-up). Other MCP clients take the same command, usually as `{ "mcpServers": { "revue": { "command": "revue", "args": ["mcp"] } } }`.
 
 Then ask things like 💬 *"show me the code changes"*, *"show me the lines you just changed"* or *"leave notes in revue on anything I should double-check"*.
 
