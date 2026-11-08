@@ -1,0 +1,6 @@
+# Blank issues stay allowed, for questions and anything the forms don't fit.
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/jmsheas3/revue/security/advisories/new
+    about: Please report security problems privately, not as a public issue.

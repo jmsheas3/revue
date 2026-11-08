@@ -53,6 +53,7 @@ Download, unpack, run. revue is a single binary that **needs git** and a **brows
 <details>
 <summary>🍎 <b>macOS</b> from the terminal</summary>
 
+<!-- install-check: macos -->
 ```sh
 curl -fsSLO https://github.com/jmsheas3/revue/releases/latest/download/revue-macos-universal.pkg
 sudo installer -pkg revue-macos-universal.pkg -target /
@@ -60,6 +61,7 @@ sudo installer -pkg revue-macos-universal.pkg -target /
 
 This installs `revue` in `/usr/local/bin`, as double-clicking the `.pkg` does. A newer `.pkg` upgrades it in place. To uninstall:
 
+<!-- install-check: macos-uninstall -->
 ```sh
 sudo rm /usr/local/bin/revue && sudo pkgutil --forget io.github.jmsheas3.revue
 ```
@@ -70,6 +72,7 @@ The `.tar.gz` holds the same signed binary, to put anywhere on your `PATH` witho
 <details>
 <summary>🐧 <b>Linux</b> from the terminal</summary>
 
+<!-- install-check: linux -->
 ```sh
 curl -fsSL https://github.com/jmsheas3/revue/releases/latest/download/revue-linux-x86_64.tar.gz | tar -xz
 sudo install revue-linux-x86_64/revue /usr/local/bin/
@@ -81,6 +84,7 @@ On ARM64 (`uname -m` says `aarch64`), use `revue-linux-arm64` in both lines. Wit
 <details>
 <summary>🪟 <b>Windows</b> from PowerShell</summary>
 
+<!-- install-check: windows -->
 ```powershell
 Invoke-WebRequest https://github.com/jmsheas3/revue/releases/latest/download/revue-windows-x86_64.zip -OutFile revue-windows-x86_64.zip
 Expand-Archive revue-windows-x86_64.zip -DestinationPath . -Force
@@ -95,12 +99,14 @@ Move `revue.exe` to a folder on your `PATH` to run it as `revue`. To update, sto
 
 Every release lists each file's SHA-256 in `SHA256SUMS`:
 
+<!-- install-check: verify -->
 ```sh
 curl -fsSLO https://github.com/jmsheas3/revue/releases/latest/download/SHA256SUMS
 sha256sum -c SHA256SUMS --ignore-missing    # Linux: checks the files you downloaded
 shasum -a 256 revue-macos-universal.pkg     # macOS: prints the hash to compare with SHA256SUMS
 ```
 
+<!-- install-check: verify-windows -->
 ```powershell
 (Get-FileHash revue-windows-x86_64.zip).Hash   # Windows: compare with SHA256SUMS (case doesn't matter)
 ```
@@ -146,7 +152,7 @@ revue prints the page's address and listens on port 4777, or on a free port if t
 claude mcp add -s user revue -- revue mcp
 ```
 
-Other MCP clients take the same command, usually as `{ "mcpServers": { "revue": { "command": "revue", "args": ["mcp"] } } }`.
+Using Antigravity CLI, Cursor CLI or GitHub Copilot CLI? [Here's how to add it](docs/mcp.md#-set-it-up). Other MCP clients take the same command, usually as `{ "mcpServers": { "revue": { "command": "revue", "args": ["mcp"] } } }`.
 
 Then ask things like 💬 *"show me the code changes"*, *"show me the lines you just changed"* or *"leave notes in revue on anything I should double-check"*.
 

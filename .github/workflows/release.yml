@@ -230,7 +230,8 @@ jobs:
         run: |
           [ "$(uname -m)" = "$ARCH" ] || { echo "::error::Expected an $ARCH Mac, got $(uname -m)"; exit 1; }
           pkg=$(ls signed/*.pkg)
-          xcrun stapler validate "$pkg"
+          # stapler looks the ticket up with Apple online, so a dropped connection is retried (retry.sh).
+          .github/scripts/retry.sh xcrun stapler validate "$pkg"
           spctl --assess --type install --verbose=2 "$pkg"
           sudo installer -pkg "$pkg" -target /
           pkgutil --pkg-info io.github.jmsheas3.revue
@@ -293,3 +294,10 @@ jobs:
         run: python3 .github/scripts/release-notes.py | tee notes.md
       - name: Publish
         run: .github/scripts/publish.sh release
+
+  # The README's install commands, run on fresh machines against the release just published (install-check.yml). The
+  # release is out by then, so a failure here means the README's instructions need fixing, not the release.
+  install-check:
+    name: Install check
+    needs: [publish]
+    uses: ./.github/workflows/install-check.yml

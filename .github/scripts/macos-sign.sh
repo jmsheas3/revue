@@ -105,6 +105,7 @@ pkgbuild --root "$work/pkgroot" --identifier "$pkg_id" --version "$version" --in
   --sign "$installer_identity" --keychain "$keychain" --timestamp "$pkg"
 pkgutil --check-signature "$pkg"
 notarize "$pkg"
-xcrun stapler staple "$pkg"
-xcrun stapler validate "$pkg"
+# Both look the ticket up with Apple online, so a dropped connection is retried rather than failing the release.
+"$root/.github/scripts/retry.sh" xcrun stapler staple "$pkg"
+"$root/.github/scripts/retry.sh" xcrun stapler validate "$pkg"
 spctl --assess --type install --verbose=2 "$pkg"

@@ -119,7 +119,7 @@ fn a_stale_detached_server_is_replaced() {
 
     rewrite(&code);
     let text = m.tool("revue_changes", json!({ "repo": root, "persist": true }));
-    assert!(text.contains("file(s) changed") && text.contains("replaced a detached revue server"), "{text}");
+    assert!(text.contains("file(s) changed") && text.contains("replaced a detached revue server whose code changed on disk"), "{text}");
     let now: Vec<u64> = m.registered(root).iter().map(|e| e["pid"].as_u64().unwrap()).collect();
     assert_eq!(now.len(), 1, "{now:?}");
     assert_ne!(now[0], first, "the stale server is still the one in use");
@@ -140,6 +140,6 @@ fn a_stale_server_started_by_hand_is_reused_with_a_note() {
     let mut m = Mcp::start(rt.path(), &code);
     let text = m.tool("revue_changes", json!({ "repo": root }));
     assert!(text.contains("file(s) changed"), "{text}");
-    assert!(text.contains(&format!("the revue server on port {} (external)", by_hand.port)) && text.contains("restart it"), "{text}");
+    assert!(text.contains(&format!("the code of the revue server on port {} (external) changed on disk", by_hand.port)) && text.contains("restart it"), "{text}");
     assert_eq!(by_hand.get("/api/info", &[]).status, 200, "the server started by hand must keep running");
 }
