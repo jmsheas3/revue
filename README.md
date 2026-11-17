@@ -33,7 +33,7 @@
 - 🌳 **The whole file tree** with changes marked, for any local or remote branch, without checking it out.
 - 🆚 **Split or unified diffs** with syntax highlighting and the changed part of each line marked.
 - 🧭 **Go to definition**: Ctrl+click (⌘+click) a name to jump to where it's defined.
-- 📷 **Images and markdown**: changed images before and after, side by side, and a sanitized markdown preview.
+- 📷 **Images and markdown**: changed images before and after, side by side, and a sanitized markdown preview that draws Mermaid diagrams.
 - 📁 **Plain folders**: point it at any folder to browse its files and docs.
 - 🔒 **Stays local**: it listens on 127.0.0.1 only, and changes your files only when you check out a branch ([security](docs/security.md)).
 

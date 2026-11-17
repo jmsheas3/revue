@@ -547,12 +547,12 @@ fn build_tools() -> Vec<Value> {
             "description": "Open revue, the browser-based git change viewer, on the overview of all changed files. Use this when the user asks to see or review code changes, rather than printing a diff. Starts a revue server for the repo if needed and reuses an open revue tab when there is one.",
             "inputSchema": schema(json!({}), true, true, &[]) }),
         json!({ "name": "revue_show",
-            "description": "Show the user a file in revue, optionally scrolled to a line or line range. Use this to point at specific code: \"look at server.js lines 120-140\". With a line it defaults to the whole-file view; without one, to the diff. view \"preview\" shows a markdown file rendered or an SVG drawn as an image. In a plain folder (not a git repo) it is the file or its preview.",
+            "description": "Show the user a file in revue, optionally scrolled to a line or line range. Use this to point at specific code: \"look at server.js lines 120-140\". With a line it defaults to the whole-file view; without one, to the diff. view \"preview\" shows a markdown file rendered (with its mermaid diagrams drawn), an SVG drawn as an image, or a mermaid file's diagram. In a plain folder (not a git repo) it is the file or its preview.",
             "inputSchema": schema(json!({
                 "path": { "type": "string", "description": "File path relative to the repo root." },
                 "line": { "type": "integer", "minimum": 1, "description": "Line to scroll to and highlight. Not with view preview, which has no line numbers." },
                 "endLine": { "type": "integer", "minimum": 1, "description": "Last line of a range starting at line." },
-                "view": { "type": "string", "enum": ["file", "diff", "preview"], "description": "Whole file, the diff, or the preview: the rendered markdown of a .md or .markdown file, or an .svg file drawn as an image (only for those files, and without line). Default: file if line is given, else diff." },
+                "view": { "type": "string", "enum": ["file", "diff", "preview"], "description": "Whole file, the diff, or the preview: the rendered markdown of a .md or .markdown file, an .svg file drawn as an image, or the diagram of a .mmd or .mermaid file (only for those files, and without line). Default: file if line is given, else diff." },
                 "side": { "type": "string", "enum": ["new", "old"], "description": "Which version: new (after the change, default) or old (before it). Line numbers refer to this side." },
             }), true, true, &["path"]) }),
         json!({ "name": "revue_annotate",
@@ -619,10 +619,11 @@ fn file_view(a: &Value, file: &str, view: &str) -> Map<String, Value> {
     f
 }
 
-// The files the page has a preview view of: hasPreview() in public/app.js (rendered markdown, or an SVG drawn).
+// The files the page has a preview view of: hasPreview() in public/app.js (rendered markdown, an SVG drawn, or a mermaid
+// file's diagram).
 fn has_preview(path: &str) -> bool {
     let path = path.to_ascii_lowercase();
-    [".md", ".markdown", ".svg"].iter().any(|ext| path.ends_with(ext))
+    [".md", ".markdown", ".svg", ".mmd", ".mermaid"].iter().any(|ext| path.ends_with(ext))
 }
 
 // A value as an error message shows it: JSON, cut short so a huge string or array can't flood the caller's context.
@@ -738,7 +739,7 @@ fn run_tool(st: &State, name: &str, a: &Value) -> R<String> {
             // The page would quietly show another view instead (setFile in app.js), so say why here.
             if view == "preview" {
                 if !has_preview(&file) {
-                    return Err(format!("view \"preview\" is only for markdown (.md, .markdown) and SVG (.svg) files; show {file} with view \"file\" or \"diff\""));
+                    return Err(format!("view \"preview\" is only for markdown (.md, .markdown), SVG (.svg) and mermaid (.mmd, .mermaid) files; show {file} with view \"file\" or \"diff\""));
                 }
                 if arg(a, "line").is_some() || arg(a, "endLine").is_some() {
                     return Err("the preview has no line numbers; leave out line and endLine to show the preview, or use view \"file\" to show the lines".into());

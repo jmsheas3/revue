@@ -202,6 +202,15 @@ figure.image figcaption { color: var(--muted); font-size: 12px; margin-bottom: 6
 figure.image img { display: block; box-sizing: content-box; max-width: calc(100% - 2px); height: auto; border: 1px solid var(--border);
   background: repeating-conic-gradient(var(--checker) 0 25%, transparent 0 50%) 0 0 / 16px 16px; }
 figure.image .placeholder { padding: 0; }
+/* A mermaid file's Diagram view (renderFile), drawn as the markdown preview draws a diagram (markdown.css). */
+.diagram-view { padding: 16px 32px 48px; }
+.diagram-view figure.diagram { margin: 0; text-align: center; }
+.diagram-view img { max-width: 100%; height: auto; }
+.diagram-view pre { margin: 0 0 8px; padding: 16px; overflow: auto; text-align: left; background: var(--bg2); border-radius: 6px; font: 12px/1.45 var(--mono); }
+.diagram-view .diagram-error { color: var(--st-D); font: 12px var(--mono); white-space: pre-wrap; text-align: left; }
+/* The diagram renderer (diagramRenderer in app.js): laid out, since mermaid measures text as it draws, and on screen,
+   where browsers don't hold back a frame's work, but never seen or reached. */
+.diagram-frame { position: fixed; top: 0; left: 0; width: 1000px; height: 600px; border: 0; opacity: 0; pointer-events: none; }
 /* a diff still loading: its likely height, with a few bars in place of the code */
 .skeleton { display: flex; flex-direction: column; gap: 9px; padding: 12px 16px 12px calc(var(--num-w) + var(--sign-w) + 8px); overflow: hidden; }
 .skeleton span { height: 8px; border-radius: 4px; background: var(--bg3); }

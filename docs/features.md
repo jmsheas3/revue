@@ -94,6 +94,7 @@ Why these limits exist is under [Security](security.md#-repo-content-is-untruste
 - The repo's own images are shown, from the version you're viewing. `<picture>` sources and GitHub's `#gh-dark-mode-only` / `#gh-light-mode-only` images follow revue's theme.
 - An image from anywhere else is never loaded; a remote one becomes a link to it instead.
 - Relative links open the file in revue, and outside links open in a new tab.
+- ` ```mermaid ` code blocks are drawn as diagrams, as on GitHub, in revue's light or dark theme. `.mmd` and `.mermaid` files have a **Diagram** view of the same kind, and an unchanged one opens there. revue includes mermaid's smaller build, which leaves out mindmap and architecture diagrams and KaTeX math: those, and a diagram with a syntax error, show their source with mermaid's reason. Diagrams are drawn as images, so their text can't be selected; the File tab has the source.
 
 ## 📁 Plain folders
 

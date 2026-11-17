@@ -22,10 +22,26 @@ mod assets {
 
 // The page renders untrusted markdown and can call the write endpoints, so only our own scripts may run (no inline
 // ones) and nothing loads from anywhere else. Styles too come only from our own files: the UI sets styles through the
-// CSSOM, which this allows, never through style attributes. img-src stays 'self' rather than 'none' because Firefox
-// applies it to its automatic /favicon.ico request and reports a violation on every page load.
-const CSP: &str = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; \
-base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+// CSSOM, which this allows, never through style attributes. img-src has 'self' rather than nothing because Firefox
+// applies it to its automatic /favicon.ico request and reports a violation on every page load, and data: for the
+// diagrams the page draws (the Mermaid section of app.js): an image, which runs and loads nothing, and opened on its own
+// a document with an opaque origin, where a blob: URL would have this page's. A markdown document can't name one: its
+// <img>s and src attributes are dropped. frame-src 'self' is for the diagram renderer (frame_csp), and also keeps that
+// frame from going anywhere else, where it would be handed the next diagram's text.
+const CSP: &str = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; \
+frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
+// The diagram renderer, mermaid/frame.html (see public/mermaid/frame.js): a page whose scripts build.rs inlines, since
+// sandbox gives it an opaque origin of its own and so it can load none of this server's files (CORP). Only those
+// scripts may run, by their hashes, so not even an event handler in a drawing that got past mermaid's sanitizing runs.
+// mermaid styles its drawings inline, which is why the page itself doesn't run it. Nothing may load, and only revue's
+// own page may frame it.
+fn frame_csp(hashes: &str) -> String {
+    format!(
+        "default-src 'none'; script-src {hashes}; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; \
+frame-ancestors 'self'; sandbox allow-scripts"
+    )
+}
 
 // The binary this process runs. public/ is built into it, so the page always matches the server, but after a
 // rebuild or upgrade the process is older than what is on disk; /api/info and /api/server say so, and unknown /api
@@ -2303,6 +2319,11 @@ fn etag_matches(req: &Request, etag: &str) -> bool {
     req.header("if-none-match").unwrap_or("").split(',').any(|t| t.trim() == etag || t.trim() == "*")
 }
 
+// The CSP hashes of a page's inlined scripts (build.rs), for a page that has any.
+fn inline_hashes(name: &str) -> Option<&'static str> {
+    assets::INLINE_HASHES.iter().find(|(n, _)| *n == name).map(|&(_, h)| h)
+}
+
 fn static_file(path: &str, req: &Request) -> Response {
     let rel = if path == "/" { "index.html" } else { &path[1..] };
     let Some(&(name, body, etag)) = assets::ASSETS.iter().find(|(n, _, _)| *n == rel) else {
@@ -2312,7 +2333,7 @@ fn static_file(path: &str, req: &Request) -> Response {
     let mut headers = vec![
         ("cache-control", "no-cache".to_string()),
         ("etag", etag.to_string()),
-        ("content-security-policy", CSP.to_string()),
+        ("content-security-policy", inline_hashes(name).map_or_else(|| CSP.to_string(), frame_csp)),
         ("x-content-type-options", "nosniff".to_string()),
     ];
     if etag_matches(req, etag) {

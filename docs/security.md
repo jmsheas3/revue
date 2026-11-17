@@ -21,6 +21,7 @@ revue is a local server that reads your code, so here is exactly what it touches
 
 - Paths and refs from the page are checked so nothing outside the repo is read, and symlinks that lead out of it aren't followed.
 - The markdown preview is sanitized and loads nothing but the repo's own images, through revue, and the page runs under a strict Content Security Policy.
+- Mermaid diagrams are drawn by mermaid in a sandboxed frame with an origin of its own, which can reach neither the page nor revue's API, and where only mermaid's own scripts may run. The page shows each drawing as an image, so nothing in it runs or loads.
 - Images are served only as images, and sandboxed when opened in a tab of their own. An SVG, which can hold script, is drawn only as an image, where browsers run none of it, and opening one on its own downloads it.
 - Images that could freeze or crash the tab are refused rather than handed to your browser ([the limits](features.md#-images)). A small file's header can claim a huge number of pixels, and an SVG's `<use>` draws a copy of a group that can hold more of them, so a file of a kilobyte can draw millions of elements. Images an SVG embeds as `data:` URLs, which an image does load, count toward the same limits.
 - An SVG within every limit can still be slow to draw: filters (a large blur, say), patterns and markers take time without adding elements, and nothing measures that short of drawing it. Such a file can hold its tab for a while; closing the tab recovers.

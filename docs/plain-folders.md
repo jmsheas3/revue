@@ -17,7 +17,7 @@ The tree lists every file, hidden ones and anything under `.git/` included, up t
 
 - The page opens on the folder's README: `README.md`, then `README`, then any `readme.*`, then `index.md`. It's rendered when it's markdown (`.md` or `.markdown`). With no README, the page asks you to pick a file.
 - Opening a folder in the tree (a click, Enter or Space) shows that folder's README too; the arrow keys only open and close folders.
-- Files open in the file view (images as pictures), markdown in the preview, and SVG drawn in its Image view.
+- Files open in the file view (images as pictures), markdown in the preview, SVG drawn in its Image view, and Mermaid files (`.mmd`, `.mermaid`) in their Diagram view.
 - Live updates, agent notes, line targets and the narrow-window drawer work as in a repo.
 
 The keys are listed under [Keyboard shortcuts](keyboard-shortcuts.md#-in-a-plain-folder).

@@ -67,7 +67,7 @@ Ask things like:
 | Tool | What it does |
 |---|---|
 | `revue_open` | Open the overview of all changes |
-| `revue_show` | Show a file, optionally scrolled to a line or range (`line`, `endLine`), in the diff or whole-file view, or (`view: preview`, without a line) a markdown file rendered or an SVG drawn |
+| `revue_show` | Show a file, optionally scrolled to a line or range (`line`, `endLine`), in the diff or whole-file view, or (`view: preview`, without a line) a markdown file rendered, an SVG drawn or a Mermaid file's diagram |
 | `revue_annotate` | Leave a note on a line or range, and show it |
 | `revue_annotations` | List or clear notes |
 | `revue_changes` | Changed files with status and line counts, as text |
