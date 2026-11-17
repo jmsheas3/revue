@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>revue diagrams</title>
+<!-- The page's hidden diagram renderer (the Mermaid section of app.js). build.rs puts each script's text in place of
+     its data-inline tag, and the server serves this with FRAME_CSP, which allows those scripts by hash and makes this a
+     sandbox of its own (see FRAME_CSP in server.rs). -->
+<script data-inline="vendor/mermaid.tiny.js"></script>
+<script data-inline="mermaid/frame.js"></script>
+</head>
+<body></body>
+</html>
