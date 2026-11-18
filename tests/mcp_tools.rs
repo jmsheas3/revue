@@ -254,12 +254,14 @@ fn follower(port: u16) -> Events {
 }
 
 #[test]
-fn revue_show_previews_markdown_and_svg_files_only() {
+fn revue_show_previews_markdown_svg_and_mermaid_files_only() {
     let dir = repo();
     let root = dir.path();
     write(root, "README.md", "# Title\n\nSome text.\n");
     write(root, "docs/Guide.MARKDOWN", "# Guide\n");
     write(root, "logo.svg", "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"8\" height=\"8\"/>\n");
+    write(root, "flow.mmd", "flowchart LR\n  A --> B\n");
+    write(root, "docs/Seq.Mermaid", "sequenceDiagram\n  A->>B: hi\n");
     write(root, "src/lib.rs", "pub fn f() {}\n");
     let r = root.to_str().unwrap();
     let mut m = Mcp::start();
@@ -277,8 +279,9 @@ fn revue_show_previews_markdown_and_svg_files_only() {
     let v = &navigated()[0];
     assert_eq!((v["file"].as_str(), v["view"].as_str(), v["line"].clone()), (Some("README.md"), Some("preview"), Value::Null), "{v}");
 
-    // An SVG drawn as an image, and markdown named in any case, as the page tells them.
-    for path in ["logo.svg", "docs/Guide.MARKDOWN"] {
+    // An SVG drawn as an image, a mermaid file's diagram, and markdown and mermaid named in any case, as the page tells
+    // them.
+    for path in ["logo.svg", "docs/Guide.MARKDOWN", "flow.mmd", "docs/Seq.Mermaid"] {
         let shown = m.ok("revue_show", json!({ "repo": r, "path": path, "view": "preview" }));
         assert!(shown.contains(&url(path, "&view=preview")), "{shown}");
     }
@@ -287,7 +290,7 @@ fn revue_show_previews_markdown_and_svg_files_only() {
     // (the page would show the file or the diff instead).
     let (text, err) = m.tool("revue_show", json!({ "repo": r, "path": "src/lib.rs", "view": "preview" }));
     assert!(err, "{text}");
-    assert_eq!(text, "view \"preview\" is only for markdown (.md, .markdown) and SVG (.svg) files; show src/lib.rs with view \"file\" or \"diff\"");
+    assert_eq!(text, "view \"preview\" is only for markdown (.md, .markdown), SVG (.svg) and mermaid (.mmd, .mermaid) files; show src/lib.rs with view \"file\" or \"diff\"");
     for lines in [json!({ "line": 2 }), json!({ "line": 1, "endLine": 2 })] {
         let mut args = json!({ "repo": r, "path": "README.md", "view": "preview" });
         args.as_object_mut().unwrap().extend(lines.as_object().unwrap().clone());
@@ -306,6 +309,8 @@ fn revue_show_previews_markdown_and_svg_files_only() {
             json!(["README.md", "preview", null]),
             json!(["logo.svg", "preview", null]),
             json!(["docs/Guide.MARKDOWN", "preview", null]),
+            json!(["flow.mmd", "preview", null]),
+            json!(["docs/Seq.Mermaid", "preview", null]),
             json!(["README.md", "file", 2])
         ]
     );

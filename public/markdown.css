@@ -36,3 +36,8 @@ input { font: inherit; color: inherit; }
 .markdown img { max-width: 100%; height: auto; box-sizing: content-box; }
 .markdown kbd { font: 11px var(--mono); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: var(--bg2); }
 .hljs { background: transparent !important; padding: 0 !important; }
+/* Mermaid diagrams (drawDiagrams in app.js): the drawing, centered, scaled down to fit like any image; until it is
+   drawn, and when it can't be, its source, with why. */
+.markdown figure.diagram { margin: 0 0 16px; text-align: center; }
+.markdown figure.diagram pre { text-align: left; }
+.markdown .diagram-error { margin-top: -8px; color: var(--st-D); font: 12px var(--mono); white-space: pre-wrap; text-align: left; }

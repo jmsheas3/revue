@@ -1313,14 +1313,14 @@ const FILE_CHUNK = 500;
 async function renderFile(frag, t, autoScroll, same = null) {
   const path = state.file;
   const change = state.tree.changes[path];
-  // A plain folder has no diffs, so its files have no Diff tab, and only markdown and SVG have a choice (File, or
-  // Preview and Image: their second view, hasPreview).
+  // A plain folder has no diffs, so its files have no Diff tab, and only markdown, SVG and mermaid files have a choice
+  // (File, or Preview, Image and Diagram: their second view, hasPreview).
   const folder = state.mode === 'folder';
   const tabs = folder && !hasPreview(path) ? null : h('div', { class: 'seg' },
     folder ? null : h('button', { class: state.view === 'diff' ? 'on' : '', onclick: () => setView('diff'), disabled: !change, title: 'Diff (f)' }, 'Diff'),
     h('button', { class: state.view === 'file' ? 'on' : '', onclick: () => setView('file'), title: 'Whole file (f)' }, 'File'),
     hasPreview(path) ? h('button', { class: state.view === 'preview' ? 'on' : '', onclick: () => setView('preview'),
-      title: isSvg(path) ? 'The drawing (f)' : 'Rendered markdown (f)' }, isSvg(path) ? 'Image' : 'Preview') : null);
+      title: previewTab(path)[1] }, previewTab(path)[0]) : null);
   // Esc's place: the overview, or in a plain folder the page it opens on (its README).
   const home = folder ? "The folder's start page" : 'All changes';
   const back = h('button', { class: 'back-btn', title: `${home} (Esc)`, 'aria-label': home, onclick: () => selectFile(null) }, '←');
@@ -1375,6 +1375,18 @@ async function renderFile(frag, t, autoScroll, same = null) {
     }
     return;
   }
+  if (state.view === 'preview' && isMermaid(path)) {
+    // A diagram file's Diagram view: the whole file drawn, as a markdown preview draws a ```mermaid block.
+    const file = await fileReq;
+    if (!t.fresh()) return;
+    const box = file.content != null ? diagramBox(file.content) : null;
+    const drawn = box ? await drawDiagrams([box]) : null;
+    if (!t.fresh()) return;
+    frag._data = JSON.stringify(['diagram', change?.status, file, drawn]);
+    if (frag._data === same) return SAME;
+    if (!fileProblem(body, file, at)) body.append(...previewNotes(path), h('div', { class: 'diagram-view' }, box));
+    return;
+  }
   if (state.view === 'preview') {
     const file = await fileReq;
     if (!t.fresh()) return;
@@ -1382,9 +1394,11 @@ async function renderFile(frag, t, autoScroll, same = null) {
     // position restored on Back lands where it was), and what they are is part of what is compared, so a live update
     // that changed only an image draws it again.
     const doc = file.content != null ? renderMarkdown(file.content, path, { side: at.side, range: rangeParams() }) : null;
-    const images = await doc?._images;
+    // Its diagrams too, unless they take long (drawDiagrams): a null is "not all in yet", so the next live update draws it
+    // again with them.
+    const [images, diagrams] = await Promise.all([doc?._images, doc?._diagrams]);
     if (!t.fresh()) return;
-    frag._data = JSON.stringify(['preview', change?.status, file, images]);
+    frag._data = JSON.stringify(['preview', change?.status, file, images, diagrams]);
     frag._images = images?.length > 0;
     if (frag._data === same) return SAME;
     if (!fileProblem(body, file, at)) body.append(...previewNotes(path), doc);
@@ -1595,8 +1609,12 @@ function imageDiff(imgs, capped) {
 // the preview is drawn in its own shadow root and contained frame (mdFrame).
 const isMarkdown = (path) => /\.(md|markdown)$/i.test(path || '');
 const isSvg = (path) => /\.svg$/i.test(path || '');
-// The files with a second view besides File (and Diff): markdown's Preview, and an SVG's Image. Both are view=preview.
-const hasPreview = (path) => isMarkdown(path) || isSvg(path);
+const isMermaid = (path) => /\.(mmd|mermaid)$/i.test(path || '');
+// The files with a second view besides File (and Diff): markdown's Preview, an SVG's Image and a mermaid file's Diagram
+// (isMermaid, with the diagrams below). All are view=preview.
+const hasPreview = (path) => isMarkdown(path) || isSvg(path) || isMermaid(path);
+const previewTab = (path) => isSvg(path) ? ['Image', 'The drawing (f)'] : isMermaid(path) ? ['Diagram', 'The diagram (f)']
+  : ['Preview', 'Rendered markdown (f)'];
 const MD_FORBID_TAGS = ['style', 'link', 'meta', 'base', 'img', 'picture', 'source', 'video', 'audio', 'track', 'iframe', 'object', 'embed', 'form', 'button', 'select', 'textarea', 'dialog'];
 const MD_FORBID_ATTR = ['style', 'id', 'name', 'target', 'background', 'src', 'srcset', 'poster', 'ping', 'formaction',
   'popover', 'popovertarget', 'popovertargetaction']; // a popover is drawn in the top layer, outside the preview's frame
@@ -1694,6 +1712,7 @@ function renderMarkdown(text, path, at) {
 }
 function withImages(doc, at) {
   doc._images = previewImages(doc, at);
+  doc._diagrams = drawDiagrams(doc._diagramBoxes || []);
   return doc;
 }
 
@@ -1731,6 +1750,7 @@ function renderMarkdownNow(text, path) {
   for (const el of root.querySelectorAll('input')) {
     if (el.type === 'checkbox') el.disabled = true; else el.remove();
   }
+  const diagrams = mdDiagrams(root);
   for (const code of root.querySelectorAll('pre > code')) {
     const lang = code.className.slice('language-'.length);
     if (lang && window.hljs && hljs.getLanguage(lang)) {
@@ -1748,6 +1768,7 @@ function renderMarkdownNow(text, path) {
   for (const a of root.querySelectorAll('a')) mdLink(a, path, root);
   const frame = mdFrame(root);
   frame._imageRefs = mdImageRefs(root, sink, path);
+  frame._diagramBoxes = diagrams;
   return frame;
 }
 
@@ -1948,8 +1969,10 @@ function placeImage(ref, found) {
   };
   draw();
 }
-// The theme changed (the header's menu, or the OS's while the page follows it): previews pick their images again.
+// The theme changed (the header's menu, or the OS's while the page follows it): previews pick their images again, and
+// draw their diagrams again (a .mmd file's is outside any preview's shadow root).
 function syncPreviewImages() {
+  for (const el of document.querySelectorAll('#main [data-md-themed]')) el._redraw?.();
   for (const host of document.querySelectorAll('.md-host')) {
     for (const el of host.shadowRoot?.querySelectorAll('[data-md-themed]') ?? []) el._redraw?.();
   }
@@ -1962,6 +1985,147 @@ function previewNotes(path) {
   if (!notes.length) return [];
   return [h('div', { class: 'notes-missing' }, notes.map(n =>
     noteBox(n, h('button', { class: 'note-link', onclick: () => jumpToLines(path, n, 'file') }, 'show in file'))))];
+}
+
+// ---------------------------------------------------------------- diagrams
+// Mermaid diagrams: a markdown preview's ```mermaid blocks, and a .mmd or .mermaid file's Diagram view (view=preview).
+// mermaid draws them in a frame of its own (public/mermaid/frame.js says why): a sandbox with an opaque origin, which
+// can reach neither this page nor the API, made the first time a diagram is drawn and kept for the page's life. It
+// answers with the drawing as SVG text, which is shown as an <img> of a data: URL: as for every SVG revue shows,
+// nothing in it runs and it loads nothing, and opened on its own it is a document with an opaque origin too (a blob:
+// URL would be this page's origin). Its width and height come with it, so its place is kept from the first paint, and
+// it is drawn again in the other color scheme when the page's theme changes (`data-md-themed`, syncPreviewImages). One
+// that can't be drawn (a syntax error, a diagram type the bundled build leaves out, a renderer that failed or took too
+// long) shows its source, with why.
+const MD_MAX_DIAGRAMS = 50; // drawn per preview; the rest stay code
+const DIAGRAM_TIMEOUT = 10000; // for the renderer to load, and for each answer
+const DIAGRAM_WAIT = 2000; // the most a preview waits for its diagrams before it is drawn without them
+const DIAGRAM_CACHE = 200; // drawings kept, by source and color scheme: a live update or theme switch draws them again
+const DIAGRAM_ALT = 'Mermaid diagram';
+
+let diagramFrame = null; // { el, ready, pending: Map(id → { resolve, reject }) }
+let diagramSeq = 0;
+const diagramCache = new Map(); // `${dark}\n${source}` → a promise of { src, width, height, alt } or { error }
+
+function diagramRenderer() {
+  if (diagramFrame) return diagramFrame;
+  const el = h('iframe', { class: 'diagram-frame', src: 'mermaid/frame.html', sandbox: 'allow-scripts', tabindex: '-1',
+    title: 'Diagram renderer', 'aria-hidden': 'true' });
+  const frame = diagramFrame = { el, pending: new Map() };
+  frame.ready = new Promise((resolve, reject) => {
+    frame.onReady = resolve;
+    setTimeout(() => reject(new Error("the diagram renderer didn't load")), DIAGRAM_TIMEOUT);
+  });
+  frame.ready.catch(e => dropRenderer(frame, e));
+  document.body.append(el);
+  return frame;
+}
+// A renderer that didn't load or stopped answering is removed, and what it still owed fails; the next diagram makes a
+// new one.
+function dropRenderer(frame, err) {
+  if (diagramFrame === frame) diagramFrame = null;
+  frame.el.remove();
+  for (const { reject } of frame.pending.values()) reject(err);
+  frame.pending.clear();
+}
+addEventListener('message', (e) => {
+  const frame = diagramFrame;
+  if (!frame || e.source !== frame.el.contentWindow) return;
+  const d = e.data;
+  if (d?.ready === true) return frame.onReady();
+  const waiting = frame.pending.get(d?.id);
+  if (!waiting) return;
+  frame.pending.delete(d.id);
+  waiting.resolve(d);
+});
+
+async function askRenderer(source, dark) {
+  const frame = diagramRenderer();
+  await frame.ready;
+  const id = ++diagramSeq;
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => dropRenderer(frame, new Error('the diagram took too long to draw')), DIAGRAM_TIMEOUT);
+    frame.pending.set(id, { resolve: (d) => { clearTimeout(timer); resolve(d); }, reject: (e) => { clearTimeout(timer); reject(e); } });
+    // The frame's origin is opaque, so there is no origin to name; frame-src (the CSP) keeps it from being anything but
+    // the renderer.
+    frame.el.contentWindow.postMessage({ id, source, dark }, '*');
+  });
+}
+
+// One diagram drawn in a color scheme: { src, width, height, alt }, or { error } with why it wasn't drawn. A syntax
+// error is kept like a drawing, since the same source fails the same way; a renderer that failed isn't, so the next
+// render tries again.
+function drawDiagram(source, dark) {
+  const k = `${dark ? 1 : 0}\n${source}`;
+  let p = diagramCache.get(k);
+  if (p) {
+    diagramCache.delete(k);
+  } else {
+    p = askRenderer(source, dark).then(diagramOf, (e) => {
+      diagramCache.delete(k);
+      return { error: e.message };
+    });
+  }
+  diagramCache.set(k, p);
+  if (diagramCache.size > DIAGRAM_CACHE) diagramCache.delete(diagramCache.keys().next().value);
+  return p;
+}
+// The renderer's answer, checked: it is the only thing the page takes from the frame.
+function diagramOf(d) {
+  if (typeof d.error === 'string') return { error: d.error || 'mermaid gave no reason' };
+  const size = (n) => Number.isFinite(n) && n > 0;
+  if (typeof d.svg !== 'string' || !size(d.width) || !size(d.height)) return { error: 'the renderer gave no drawing' };
+  const text = (s) => (typeof s === 'string' && s.trim() ? s.trim() : null);
+  return {
+    src: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(d.svg),
+    width: Math.ceil(d.width), height: Math.ceil(d.height),
+    alt: [text(d.title), text(d.desc)].filter(Boolean).join(': ') || DIAGRAM_ALT,
+  };
+}
+
+// A diagram's place: its source, as a code block, until it is drawn (drawDiagrams).
+function diagramBox(source) {
+  const box = h('figure', { class: 'diagram' }, h('pre', {}, h('code', {}, source)));
+  box._source = source;
+  return box;
+}
+// A rendered document's ```mermaid blocks, each put in a diagramBox; past MD_MAX_DIAGRAMS they stay code, saying why.
+function mdDiagrams(root) {
+  const boxes = [];
+  for (const code of root.querySelectorAll('pre > code')) {
+    if (!/^language-mermaid$/i.test(code.className)) continue;
+    if (boxes.length >= MD_MAX_DIAGRAMS) {
+      code.parentNode.title = `Not drawn: over ${MD_MAX_DIAGRAMS} diagrams`;
+      continue;
+    }
+    const box = diagramBox(code.textContent);
+    code.parentNode.replaceWith(box);
+    boxes.push(box);
+  }
+  return boxes;
+}
+
+// Draws each box's diagram in the page's color scheme. Resolves to what was drawn, for renderFile to compare (each
+// one's size, or why it wasn't drawn), once they all are or DIAGRAM_WAIT has passed: then to null, and they are put in
+// place as they come.
+function drawDiagrams(boxes) {
+  if (!boxes.length) return Promise.resolve([]);
+  const all = Promise.all(boxes.map(drawBox));
+  return Promise.race([all, new Promise(resolve => setTimeout(() => resolve(null), DIAGRAM_WAIT))]);
+}
+async function drawBox(box) {
+  const dark = pageDark();
+  box._dark = dark;
+  box.setAttribute('data-md-themed', '');
+  box._redraw = () => { if (box._dark !== pageDark()) drawBox(box); };
+  const d = await drawDiagram(box._source, dark);
+  if (box._dark !== dark) return null; // the theme changed meanwhile: the newer drawing goes in its place
+  if (d.error) {
+    box.replaceChildren(h('pre', {}, h('code', {}, box._source)), h('div', { class: 'diagram-error' }, `Diagram not drawn: ${d.error}`));
+    return d.error;
+  }
+  box.replaceChildren(h('img', { src: d.src, alt: d.alt, width: d.width, height: d.height, decoding: 'async' }));
+  return [d.width, d.height];
 }
 
 // `prev` maps paths to the sections of the overview being replaced (a forced render). A section that is still there

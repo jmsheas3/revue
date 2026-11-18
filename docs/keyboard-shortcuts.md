@@ -10,7 +10,7 @@ Press `?` in revue (or click the `?` button in the header) to see these at any t
 | `Esc` | Back to all changes |
 | `/` | Filter files |
 | Ctrl+click (⌘+click) | [Go to definition](features.md#-go-to-definition) (browser Back returns) |
-| `f` | Diff → file → preview (markdown) or image (SVG) |
+| `f` | Diff → file → preview (markdown), image (SVG) or diagram (Mermaid) |
 | `s` | Split / unified |
 | `w` | Wrap long lines / scroll sideways |
 | `1` `2` `3` | Changes / History / Branch |
@@ -38,7 +38,7 @@ Split needs room: when it doesn't fit, diffs are unified (see [Diffs](features.m
 |---|---|
 | `j` `k` (or `n` `p`) | Next / previous file in the tree |
 | `Esc` | Back to the folder's README |
-| `f` | A markdown or SVG file: file view ↔ preview or image |
+| `f` | A markdown, SVG or Mermaid file: file view ↔ preview, image or diagram |
 | `Enter` `Space` in the tree | Open the row; on a folder, also show its README |
 | Ctrl+click (⌘+click) | Go to a definition among the folder's files |
 | `w` `/` `r` `?` | As in a repo |
